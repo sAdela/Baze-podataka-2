@@ -211,6 +211,12 @@ Također dati prikaz ukupne vrijednosti narudžbe i ukupan broj pojedinih
 ukupnih vrijednosti narudžbi. Rezultat sortirati ukupnom broju pojedinih
 ukupnih vrijednosti narudžbe.*/
 
-
+SELECT PV.Name, POD.OrderQty, POD.UnitPrice, POD.OrderQty*POD.UnitPrice Ukupno, COUNT(POD.OrderQty*POD.UnitPrice) Brojac
+FROM Purchasing.PurchaseOrderDetail POD
+	INNER JOIN Purchasing.PurchaseOrderHeader POH
+	ON POD.PurchaseOrderID = POH.PurchaseOrderID
+	INNER JOIN Purchasing.Vendor PV
+	ON POH.VendorID = PV.BusinessEntityID
+GROUP BY PV.Name, POD.OrderQty, POD.UnitPrice, POD.OrderQty*POD.UnitPrice
 
 
