@@ -1,0 +1,137 @@
+/*1. Kreirati bazu Agregatne.
+
+2. Kreirati šemu Funkcije.
+
+3. Kreirati tabelu Odjel u šemi Funkcije koja će se sastojati od sljedećih polja:
+OdjelID, kratka cjelobrojna vrijednost, obavezan unos, primarni ključ sa početnom 
+vrijednošću 1 i korakom povećanja 1
+Naziv, 50 UNICODE znakova, obavezan unos,
+NazivSektora, 50 UNICODE znakova, obavezan unos,
+DatumKreiranja, datumska varijabla za unos datuma
+*/
+
+CREATE DATABASE Agregatne
+GO
+USE Agregatne
+CREATE SCHEMA Funkcije
+GO
+CREATE TABLE Funkcije.Odjel (
+	OdjelID SMALLINT NOT NULL CONSTRAINT PK_Odjel PRIMARY KEY(OdjelID) IDENTITY(1,1),
+	Naziv NVARCHAR(50) NOT NULL,
+	NazivSektora NVARCHAR(50) NOT NULL,
+	DatumKreiranje DATE NOT NULL
+)
+/*4. U tabelu Odjel importovati one zapise iz tabele HumanResources.Department baze AdventureWorks2014
+koji pripadaju ili sektoru Prodaja i marketing ili Istraživanje i razvoj.
+Zapise prilikom importa sortirati prema nazivu sektora.*/
+INSERT INTO Funkcije.Odjel
+SELECT D.Name, D.GroupName, LEFT(D.ModifiedDate, 11)
+FROM AdventureWorks2014.HumanResources.Department D
+WHERE GroupName LIKE 'Research and Development' OR GroupName LIKE 'Sales and Marketing'
+
+/*5. U bazi Agregatne, šemi Funkcije kreirati tabelu AgrOdjel koja će se sastojati od polja:
+NazivSektora, 50 UNICODE karaktera,
+UkupnoSektor, cjelobrojna varijabla*/
+CREATE TABLE Funkcije.AgrOdjel(
+	NazivSektora NVARCHAR(50) NOT NULL,
+	UkupnoSektor INT
+)
+/*6. Tabelu AgrOdjel popuniti tako što će se u nju unijeti agregirani podaci iz tabele
+HumanResources.Department. Agregacija će se sastojati od ukupnog broja odjela po sektorima.*/
+INSERT INTO Funkcije.AgrOdjel
+SELECT GroupName, COUNT(GroupName)
+FROM AdventureWorks2014.HumanResources.Department
+GROUP BY GroupName
+
+/*7. Iz tabele HumanResources.Employee baze AdventureWorks2014 dati pregled broja 
+uposlenika po godinama rođenja i godinama zaposlenja.*/
+SELECT YEAR (BirthDate) AS GodRodj, 
+	COUNT (YEAR (BirthDate)) BrojPoGodinama,
+	YEAR (HireDate) AS GodRod,
+	COUNT (YEAR (HireDate)) BrojPoGod
+FROM AdventureWorks2014.HumanResources.Employee
+GROUP BY YEAR (BirthDate), YEAR (HireDate)
+
+/*8. Iz tabele HumanResources.Employee dati prikaz vrijednosti ukupnog broja
+ po menadžerskim pozicijama. Rezultat grupirati prema nazivima pozicija.*/
+SELECT COUNT(BusinessEntityID), JobTitle
+FROM AdventureWorks2014.HumanResources.Employee E
+WHERE JobTitle LIKE '%manager%'
+GROUP BY JobTitle
+
+/*10. Iz tabele HumanResource.EmployeePayHistory dati prikaz 
+ukupnog broja pojedinih rata koje su veće od 10.*/
+SELECT Rate, COUNT(Rate) BrojRata
+FROM AdventureWorks2014.HumanResources.EmployeePayHistory
+WHERE Rate > 10
+GROUP BY Rate
+
+/*11. Iz tabele HumanResource. EmployeePayHistory dati prikaz ukupnog broja pojedinih rata
+pri čemu će se prikazati samo one rate čiji ukupni broj je veći od 10.
+Rezultat sortirati u opadajućem redoslijedu po broju rata.*/
+SELECT COUNT(Rate), Rate 
+FROM AdventureWorks2014.HumanResources.EmployeePayHistory
+GROUP BY Rate
+HAVING COUNT(Rate) > 10
+ORDER BY 1 DESC
+
+/*12. U tabeli Production.ProductCostHistory se nalaze polja početnog i datuma modificiranja cijene.
+Dati prikaz ukupnog broja zapisa po vrijednosti dana razlike između navedenih datuma. 
+Rezultat grupirati po vrijednosti dana razlike.*/
+SELECT COUNT (CONVERT(INT, ModifiedDate - StartDate)) DaniRazlike, CONVERT(INT, ModifiedDate - StartDate)
+FROM AdventureWorks2014.Production.ProductCostHistory
+GROUP BY CONVERT(INT, ModifiedDate - StartDate)
+
+/*13. Iz tabele Production.Product dati prikaz broja zapisa po slovnim oznakama polja ProductNumber.
+ Rezultat sortirati u opadajućem redoslijedu po brojaču i slovnoj oznaci.*/
+USE AdventureWorks2014
+GO
+
+SELECT LEFT(ProductNumber, 2) Slovo, COUNT(LEFT(ProductNumber,2)) Brojac
+FROM Production.Product
+GROUP BY LEFT(ProductNumber,2)
+ORDER BY Brojac DESC, Slovo DESC
+
+/*14. Iz tabele Production.Product dati prikaz broja zapisa po godinama početka prodaje.
+ Rezultat sortirati u opadajućem redoslijedu po godini i brojaču.*/
+SELECT YEAR(SellStartDate), COUNT(YEAR(SellStartDate))
+FROM Production.Product
+GROUP BY YEAR(SellStartDate)
+ORDER BY 1 DESC, 2 DESC
+
+/*15. U bazi Agregatne kreirati tabelu CijenaGodine sa sljedećim poljima:
+Godina, cjelobrojna varijabla,
+Cijena, decimalna varijabla sa 2 decimalna mjesta,
+BrojacCijena, cjelobrojna varijabla
+*/
+ 
+CREATE TABLE CijenaGodine(
+	Godine INT NULL,
+	Cijena DECIMAL(8,2) NULL, 
+	BrojacCijena INT NULL
+)
+
+/*16. U tabelu CijenaGodine importovati podatke iz tabele Production.Product
+ baze AdventureWorks2014 na sljedeći način:
+U polje Godina godinu početka prodaje,
+U polje Cijena standardnu cijenu,
+U polje BrojacCijena broj pojavljivanja pojedinačne cijene
+*/
+INSERT INTO CijenaGodine
+SELECT YEAR(SellStartDate), StandardCost, COUNT(StandardCost) Brojac
+FROM AdventureWorks2014.Production.Product 
+GROUP BY YEAR(SellStartDate), StandardCost
+
+/*17. Iz tabele CijenaGodine dati prikaz minimalne, maksimalne, srednje vrijednosti 
+i zbira polja Cijena. Rezultat grupirati po godini.*/
+SELECT Godine, MIN(Cijena) MinGodina, MAX(Cijena) MaxGodina, 
+		AVG(Cijena) AvgGodina, SUM(Cijena) Ukupno
+FROM CijenaGodine
+GROUP BY Godine
+
+/*18. Iz tabele CijenaGodine izbrojati po vrijednostima sadržaj kolone BrojacCijena.
+Rezultat grupirati po godini i brojacu cijena. Sortirati u rastućem redoslijedu po godini.*/
+SELECT BrojacCijena, Godine, COUNT(BrojacCijena) as Brojac
+FROM CijenaGodine
+GROUP BY BrojacCijena, Godine
+ORDER BY Godine
