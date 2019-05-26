@@ -1,0 +1,216 @@
+/*1.Kreirati bazu Joini.
+
+U bazi kreirati tabelu JoinTabela1 sa sljedećim poljima:
+OsobaID, cjelobrojna vrijednost, primarni ključ sa automatskim punjenjem i korakom 1
+TipOsobe, 2 karaktera, obavezan unos,
+Prezime 50 karaktera,
+Ime 50 karaktera, obavezan unos,
+BrTel, 25 karaktera, obavezan unos,
+Lozinka, 128 karaktera, obavezan unos
+*/
+
+CREATE DATABASE Joini
+USE Joini
+
+CREATE TABLE JoinTabela1(
+	OsobaID INT NOT NULL CONSTRAINT PK_OsobaID PRIMARY KEY (OsobaID) IDENTITY(1,1),
+	TipOsobe NCHAR(2) NOT NULL,
+	Prezime NVARCHAR(50),
+	Ime NVARCHAR(50) NOT NULL,
+	BrTel NVARCHAR(25) NOT NULL,
+	Lozinka VARCHAR(128) NOT NULL
+)
+
+/*2. U tabelu JoinTabela1 importovati podatke iz kolona PersonType, FirstName, 
+LastName, PhoneNumber i PasswordHash tabela Password, Person i PersonPhone
+baze AdventureWorks2014.*/
+
+INSERT INTO JoinTabela1
+SELECT P.PersonType, P.LastName, P.FirstName, PP.PhoneNumber, PW.PasswordHash
+FROM AdventureWorks2014.Person.Password PW
+	INNER JOIN AdventureWorks2014.Person.Person P 
+	ON PW.BusinessEntityID = P.BusinessEntityID
+	INNER JOIN AdventureWorks2014.Person.PersonPhone PP
+	ON PP.BusinessEntityID = P.BusinessEntityID
+
+/*3. U bazi Join Kreirati tabelu JoinTabela2 koja će se sastojati od polja:
+ProizvodID, cjelobrojna vrijednost, primarni ključ sa automatskim punjenjem i korakom 1
+BrProizvoda, 20 karaktera, obavezan unos,
+Velicina 5 karaktera, 
+Tezina decimalni broj sa 2 decimalna mjesta,
+BrDanaZaProizv cjelobrojna vrijednost, obavezan unos,
+Kolicina cjelobrojna vrijednost, obavezan unos,
+Naziv 50 karaktera
+*/
+
+CREATE TABLE JoinTabela2(
+	ProizvodID INT NOT NULL CONSTRAINT PK_ProizvodID PRIMARY KEY(ProizvodID) IDENTITY(1,1),
+	BrProizvoda VARCHAR(20) NOT NULL,
+	Velicina CHAR(5),
+	Tezina DECIMAL(8,2), 
+	BrDanaZaProizv INT NOT NULL,
+	Kolicina INT NOT NULL,
+	Naziv VARCHAR(50)
+)
+
+/*4. U tabelu JoinTabela2 imporovati podatke iz kolona ProductNumber,
+Size, Weight, DaysToManufacture, Quantity i Name tabela Location,
+ProductInventory i Product baze AdventureWorks2014.*/
+
+INSERT INTO JoinTabela2
+SELECT P.ProductNumber, P.Size, P.Weight, P.DaysToManufacture, PI.Quantity, L.Name
+FROM AdventureWorks2014.Production.Product P
+	INNER JOIN AdventureWorks2014.Production.ProductInventory PI
+	ON PI.ProductID = P.ProductID
+	INNER JOIN AdventureWorks2014.Production.Location L
+	ON PI.LocationID = L.LocationID
+
+/*5. U bazi Join kreirati tabelu JoinTabela3 koja će se sastojati od polja:
+KljucID cjelobrojna vrijednost, primarni ključ sa automatskim punjenjem i korakom 1
+DatumRodjenja datumska varijabla, obavezan unos,
+DatumZaposlenja datumska varijabla,
+Resume XML varijabla, obavezan unos,
+OdjelID 3 karaktera*/
+
+CREATE TABLE JoinTabela3(
+	KljucID INT NOT NULL CONSTRAINT PK_KljucID PRIMARY KEY (KljucID) IDENTITY(1,1),
+	DatumRodjenja DATE NOT NULL,
+	DatumZaposlenja DATE,
+	Resume XML NOT NULL,
+	OdjelID CHAR(3)
+)
+
+/*6. U tabelu JoinTabela3 importovati podatke iz kolona BirthDate, HireDate,
+Resume i DepartmentID tabela EmployeeDepartmentHistory, Employee,
+JobCandidate baze AdventureWorks2014.*/
+
+INSERT INTO JoinTabela3
+SELECT E.BirthDate, E.HireDate, JC.Resume, EDH.DepartmentID
+FROM AdventureWorks2014.HumanResources.EmployeeDepartmentHistory EDH
+	INNER JOIN AdventureWorks2014.HumanResources.Employee E
+	ON EDH.BusinessEntityID = E.BusinessEntityID
+	INNER JOIN AdventureWorks2014.HumanResources.JobCandidate JC
+	ON E.BusinessEntityID = JC.BusinessEntityID
+
+/*7. Iz tabela Production.Product, Production.ProductInventory i Product.Location
+u tabelu JoinTabela2 importovati sve zapise u kojima se 
+ispred, iza ili i ispred i iza dvije cifre nalazi bilo koji znak (karakter)
+Primjeri: aa12 ili 12aa ili a12a ili 12a ili a12*/
+
+INSERT INTO JoinTabela2
+SELECT P.ProductNumber, P.Size, P.Weight, P.DaysToManufacture, PI.Quantity, L.Name
+FROM AdventureWorks2014.Production.Product P
+	INNER JOIN AdventureWorks2014.Production.ProductInventory PI
+	ON PI.ProductID = P.ProductID
+	INNER JOIN AdventureWorks2014.Production.Location L
+	ON PI.LocationID = L.LocationID
+WHERE P.ProductNumber LIKE ('%[A-Z][0-9][0-9][A-Z]%') 
+
+/*8. U bazi Join kreirati tabelu JoinTabela4 koja će se sastojati od sljedećih polja:
+NarudzbaID cjelobrojna vrijednost, obavezan unos, primarni ključ,
+NazivKompanije 50 UNICODE karaktera,
+KupacID 5 karaktera
+UposlenikID cjelobrojna vrijednost,
+Grad 20 karaktera
+Drzava 4 karaktera*/
+
+CREATE TABLE JoinTabela4(
+	NarudzbaID INT NOT NULL CONSTRAINT PK_NarudzbaID PRIMARY KEY(NarudzbaID),
+	NazivKompanije NVARCHAR(50),
+	KupacID CHAR(5), 
+	UposlenikID INT,
+	Grad VARCHAR(20),
+	Drzava CHAR(4)
+)
+
+/*9. U tabelu JoinTabela4 importovati kolone OrderID, CompanyName,
+CustomerID, EmployeeID, City i Country iz tabela Orders, Customers i Employees baze Northwind.*/
+
+INSERT INTO JoinTabela4
+SELECT O.OrderID, C.CompanyName, O.CustomerID, E.EmployeeID, E.City, E.Country
+FROM  NORTHWND.dbo.Employees E 
+	INNER JOIN NORTHWND.dbo.Orders O
+	ON E.EmployeeID = O.EmployeeID
+	INNER JOIN NORTHWND.dbo.Customers C
+	ON O.CustomerID = C.CustomerID
+
+/*10. U bazi Join kreirati tabelu JoinTabela5 koja će se sastojati od sljedećih polja:
+PrimarniKljuc cjelobrojna vrijednost, primarni ključ, automatsko punjenje sa korakom 1
+NarudzbaID cjelobrojna vrijednost, obavezan unos,
+JedCijena decimalni broj sa dvije decimale, obavezan unos,
+Kolicina cjelobrojna vrijednost, obavezan unos,
+NazivProizvoda 50 UNICIODE karaktera, 
+DobavljacID cjelobrojna vrijednost, obavezan unos,
+Ukupno decimalni broj sa dvije decimale, obavezan unos
+
+Polje NarudzbaID je spoljni ključ prema tabeli JoinTabela4.
+*/
+
+CREATE TABLE JoinTabela5(
+	PrimarniKljuc INT NOT NULL CONSTRAINT PK_PrimarniKljuc 
+	PRIMARY KEY(PrimarniKljuc) IDENTITY(1,1),
+	NarudzbaID INT NOT NULL,
+	JedCijena DECIMAL(8,2) NOT NULL,
+	Kolicina INT NOT NULL,
+	NazivProizvoda NVARCHAR(50),
+	DobavljacID INT NOT NULL,
+	Ukupno DECIMAL(8,2) NOT NULL,
+	CONSTRAINT FK_NarudzbaID FOREIGN KEY(NarudzbaID)
+	REFERENCES JoinTabela4 (NarudzbaID)
+)
+
+/*11.U tabelu JoinTabela5 importovati podatke iz kolona OrderID, UnitPrice, Quantity,
+ProductName i SupplierID tabela Order Details i Products. Polje Ukupno je izračunato polje.*/
+
+INSERT INTO JoinTabela5
+SELECT OD.OrderID, OD.UnitPrice, OD.Quantity, P.ProductName, P.SupplierID, OD.UnitPrice * OD.Quantity 
+FROM NORTHWND.dbo.[Order Details] OD
+	INNER JOIN NORTHWND.dbo.Products P
+	ON OD.ProductID = P.ProductID
+
+/*12. Iz tabela JoinTabela4 i JoinTabela5 dati prikaz sume Ukupno
+pri čemu će rezultat biti grupiran po nazivu kompanije i ID narudžbe.*/
+
+SELECT JT4.NarudzbaID, JT4.NazivKompanije, SUM(JT5.Ukupno)
+FROM JoinTabela4 JT4
+	INNER JOIN JoinTabela5 JT5
+	ON JT5.NarudzbaID = JT4.NarudzbaID
+GROUP BY JT4.NazivKompanije, JT4.NarudzbaID
+
+/*13. Iz tabela JoinTabela4 i JoinTabela5 dati prikaz ukupnog broja ostvarenih narudžbi
+uz uslov da je ukupan broj narudžbi bio veći od 3 
+pri čemu će rezultat biti grupiran po nazivu kompanije i ID narudžbe.*/
+
+SELECT JT4.NazivKompanije, JT4.NarudzbaID, COUNT(JT5.NarudzbaID) UkupanBroj
+FROM JoinTabela4 JT4
+	INNER JOIN JoinTabela5 JT5
+	ON JT4.NarudzbaID = JT5.NarudzbaID
+GROUP BY JT4.NazivKompanije, JT4.NarudzbaID
+HAVING COUNT(JT5.NarudzbaID) > 3
+
+/*14. Iz tabela PurchaseOrderDetail, PurchaseOrderHeader i Vendor
+dati prikaz polja Name, OrderDate, OrderQty i UnitPrice.
+Također dati prikaz ukupne vrijednosti narudžbe.
+Rezultat sortirati po ukupnoj vrijednosti narudžbe.*/
+
+USE AdventureWorks2014
+GO
+
+SELECT PV.Name, POH.OrderDate, POD.OrderQty, POD.UnitPrice,
+		POD.OrderQty * POD.UnitPrice AS Ukupno
+FROM Purchasing.PurchaseOrderDetail POD
+	INNER JOIN Purchasing.PurchaseOrderHeader POH
+	ON POD.PurchaseOrderID = POH.PurchaseOrderID
+	INNER JOIN Purchasing.Vendor PV
+	ON POH.VendorID = PV.BusinessEntityID
+ORDER BY POD.OrderQty * POD.UnitPrice
+
+/*15. Iz tabela PurchaseOrderDetail, PurchaseOrderHeader i Vendor 
+dati prikaz polja Name, OrderQty i UnitPrice. 
+Također dati prikaz ukupne vrijednosti narudžbe i ukupan broj pojedinih
+ukupnih vrijednosti narudžbi. Rezultat sortirati ukupnom broju pojedinih
+ukupnih vrijednosti narudžbe.*/
+
+
+
+
