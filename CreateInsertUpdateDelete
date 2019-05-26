@@ -1,0 +1,317 @@
+/*. Kreirati bazu podataka Radna.
+
+2. Kreirati tabelu Autori koja će se sastojati od sljedećih polja:
+AutorID, 11 karaktera, primarni ključ, obavezan unos,
+Prezime, 40 karaktera, obavezan unos,
+Ime, 20 karaktera, obavezan unos,
+Telefon, 11 karaktera, obavezan unos,
+Adresa, 11 karaktera,
+Grad, 20 karaktera, 
+Drzava, 2 karaktera,
+PostanskiBroj, 5 karaktera,
+StanjeUgovora, bit polje
+*/
+
+CREATE DATABASE Radna
+go
+
+CREATE TABLE Autori (
+	AutorID VARCHAR(11) NOT NULL CONSTRAINT PK_AutorID PRIMARY KEY(AutorID),
+	Prezime VARCHAR(40) NOT NULL,
+	Ime VARCHAR(20) NOT NULL,
+	Telefon CHAR(12) NOT NULL,
+	Adresa VARCHAR(40) NULL,
+	Grad VARCHAR(20) NULL,
+	Drzava CHAR(2) NULL,
+	PostanskiBroj CHAR(5) NULL,
+	StanjeUgovora BIT NOT NULL
+)
+
+/*
+3. Importovati u tabelu Autori podatke iz tabele authors baze pubs uz uslov
+ da ID autora započinje brojevima 1, 2 ili 3 i da autor ima zaključen ugovor.
+*/
+
+INSERT INTO Autori
+SELECT *
+FROM pubs.dbo.authors A
+WHERE A.au_id LIKE '[123]%' AND A.contract = 1
+
+/*4. U tabelu Autori iz tabele authors baze pubs importovati vrijednosti iz polja 
+au_id, au_lname, au_fname, phone i address pri čemu adresa počinje cifrom 3 i 
+na trećem mjestu se nalazi cifra 1. Uzeti da svi autori imaju potpisan ugovor.*/
+
+INSERT INTO Autori 
+SELECT A.au_id, A.au_fname, A.au_lname, A.phone, A.address, NULL, NULL, NULL, 1
+FROM pubs.dbo.authors A
+WHERE A.address LIKE '3_1%' AND A.contract = 1
+
+/*5. Iz tabele Autori obrisati sve autore čiji broj telefona počinje sa 40 ili 70.*/
+DELETE FROM Autori
+WHERE Autori.Telefon LIKE '40%' OR Autori.Telefon LIKE '70%'
+
+/*6. U tabeli Autori izvršiti izmjenu svih NULL odgovarajućim vrijednostima.*/
+UPDATE Autori
+SET Grad = 'Zenica', Drzava = 'BH', PostanskiBroj = '72000'
+WHERE Grad IS NULL
+
+/*7. Izbrisati sve podatke iz tabele Autori i importovati sve podatke iz tabele authors baze pubs.*/
+DELETE FROM Autori
+GO
+INSERT INTO Autori
+SELECT * 
+FROM pubs.dbo.authors
+
+/*8. Kreirati tabelu Djelo koja će se sastojati od polja:
+
+DjeloID, 6 karaktera, primarni ključ, obavezan unos,
+NazivDjela, 80 karaktera, obavezan unos,
+Zanr, 12 karaktera, obavezan unos,
+IzdavacID, 4 karaktera, 
+Cijena, novčana varijabla,
+Dobit, novčana varijabla,
+Klasifikacija, cjelobrojna varijabla,
+GodisnjaProdaja, cjelobrojna varijabla,
+Biljeska, 200 karaktera,
+DatumIzdavanja, datumska varijabla, obavezan unos,
+VrijemIzdavanja, vremenska varijabla, obavezan unos
+*/
+
+CREATE TABLE Djelo(
+	DjeloID VARCHAR(6) NOT NULL CONSTRAINT PK_DjeloID PRIMARY KEY(DjeloID),
+	NazivDjela VARCHAR(80) NOT NULL,
+	Zanr VARCHAR(12) NOT NULL,
+	IzdavacID CHAR(4) NULL,
+	Cijena MONEY NULL,
+	Dobit MONEY NULL,
+	Klasifikacija INT NULL,
+	GodisnjaProdaja INT NULL,
+	Biljeska VARCHAR(200) NULL,
+	DatumIzdavanja DATE NOT NULL,
+	VrijemeIzdavanja TIME NOT NULL
+)
+
+
+/*9. Importovati u tabelu Djelo podatke iz svih polja tabele titles baze pubs uz uslov da vrijednsot
+ polja price bude NULL. Voditi računa o načinu punjenja polja DatumIzdavanja i VrijemeIzdavanja.*/
+INSERT INTO Djelo
+SELECT T.title_id, T.title, T.type, T.pub_id, T.price, T.advance, 
+		T.royalty, T.ytd_sales, T.notes, LEFT(T.pubdate, 11), RIGHT(T.pubdate, 7)
+FROM pubs.dbo.titles T
+WHERE T.price IS NULL
+
+/*10. Trenutno je u toku akcija na prodaju svih djela. 
+Potrebno je u tabelu Djela importovati podatke iz svih polja tabela titles baze pubs
+ pri čemu će cijena biti korigovana na sljedeći način:
+
+a) djela čija je cijena veća ili jednaka 15 KM cijenu smanjiti za 20%
+b) djela čija je cijena manja od 15 KM cijenu smanjiti za 15%
+*/
+
+INSERT INTO Djelo 
+SELECT T.title_id, T.title, T.type, T.pub_id, T.price - 0.2 * T.price, T.advance, 
+		T.royalty, T.ytd_sales, T.notes, LEFT(T.pubdate, 11), RIGHT(T.pubdate, 7)
+FROM pubs.dbo.titles T
+WHERE T.price >= 15
+
+INSERT INTO Djelo 
+SELECT T.title_id, T.title, T.type, T.pub_id, T.price - 0.15 * T.price, T.advance, 
+		T.royalty, T.ytd_sales, T.notes, LEFT(T.pubdate, 11), RIGHT(T.pubdate, 7)
+FROM pubs.dbo.titles T
+WHERE T.price < 15 AND T.price IS NOT NULL
+
+/*11. U tabeli Djelo zamijeniti NULL odgovarjućim vrijednostima u svim poljima
+ u kojima nije postavljen zanr djela.*/
+UPDATE Djelo
+SET Cijena = 10, Dobit = 1000, 
+	Klasifikacija = 16, GodisnjaProdaja = 2000, Biljeska = 'Biljeska'
+WHERE Zanr = 'UNDECIDED'
+
+SELECT * FROM Djelo
+/*12. Iz tabele Djelo obrisati sve zapise u kojima je u bilo kojem polju
+ NULL vrijednost ili je cijena manja od 5 KM.*/
+DELETE FROM Djelo
+WHERE (IzdavacID IS NULL OR Cijena IS NULL
+	 OR Dobit IS NULL OR Klasifikacija IS NULL
+	OR GodisnjaProdaja IS NULL OR Biljeska IS NULL)
+	OR Cijena < 5
+
+/*13. Obrisati sve zapise iz tabele Djelo i importovati sve zapise iz tabele titles
+ uz vođenje računa da se ispravno popune sva polja tabele Djelo.*/
+DELETE FROM Djelo
+GO
+INSERT INTO Djelo
+SELECT T.title_id, T.title, T.type, T.pub_id, T.price, T.advance, 
+		T.royalty, T.ytd_sales, T.notes, LEFT(T.pubdate, 11), RIGHT(T.pubdate, 7)
+FROM pubs.dbo.titles T
+
+/*14. Kreirati tabelu AutorDjelo koja će se sastojati od sljedećih polja:
+AutorID, 11 znakova, primarni ključ, obavezan unos, 
+DjeloID, 6 znakova, primarni kljuć, obavezan unos,
+RedBrAutora, kratka cjelobrojna varijabla,
+UdioAutPrava, cjelobrojna varijabla,
+ISBN, 25 znakova
+Polja AutorID i DjeloID su spoljni ključevi prema tabelama Autor i Djelo.
+*/
+CREATE TABLE AutorDjelo(
+	AutorID VARCHAR(11) NOT NULL,
+	DjeloID VARCHAR(6) NOT NULL,
+	RedBrAutora tinyint NULL,
+	UdioAutPrava int NULL,
+	ISBN CHAR(25) NULL,
+	CONSTRAINT PK_AutorDjelo PRIMARY KEY(AutorID, DjeloID),
+	CONSTRAINT FK_AutorDjelo_Autori FOREIGN KEY (AutorID) 
+	REFERENCES dbo.Autori (AutorID),
+	CONSTRAINT FK_AutorDjelo_Djelo FOREIGN KEY (DjeloID) 
+	REFERENCES dbo.Djelo (DjeloID)
+)
+
+/*15. Obrisati ograničenja spoljnih ključeva, a zatim ih ponovo uspostaviti.*/
+ALTER TABLE AutorDjelo
+DROP CONSTRAINT FK_AutorDjelo_Autori
+
+ALTER TABLE AutorDjelo
+DROP CONSTRAINT FK_AutorDjelo_Djelo
+
+ALTER TABLE AutorDjelo
+WITH CHECK ADD CONSTRAINT FK_AutorDjelo_Autori
+FOREIGN KEY (AutorID) REFERENCES dbo.Autori (AutorID)
+
+ALTER TABLE AutorDjelo
+WITH CHECK ADD CONSTRAINT FK_AutorDjelo_Djelo
+FOREIGN KEY (DjeloID) REFERENCES dbo.Djelo (DjeloID)
+
+/*16. U tabelu AutorDjelo importovati sve zapise iz tabele titleauthor baze pubs, 
+pri čemu će se polje ISBN popunjavati na sljedeći način:
+iz polja title_id preuzeti cifre, te prije njih ubaciti riječ
+ ISBN pri čemu između ISBN i cifara treba biti jedno prazno mjesto,
+  a poslije njih prazno mjesto i vrijednost polja au_id iz tabele titleauthor baze pubs.
+*/
+INSERT INTO AutorDjelo
+SELECT TA.au_id, TA.title_id, TA.au_ord, TA.royaltyper, 'ISBN ' + RIGHT(TA.title_id, 4) + ' ' + TA.au_id
+FROM pubs.dbo.titleauthor TA
+
+/*17. Iz tabele titleauthor dati pregled 10 zapisa sa najmanjim
+ udjelom autorskih prava. Potrebno je dati prikaz svih polja.*/
+SELECT TOP 10 WITH ties * 
+FROM pubs.dbo.titleauthor
+ORDER BY royaltyper 
+
+/*18. Kreirati bazu podataka RadnaBaza.
+
+19. U bazi RadnaBaza kreirati tabelu Narudzbe koja će se sastojati od polja:
+NarudzbaID, cjelobrojna varijabla, primarni ključ
+NaruciteljID, 5 znakova,
+ZaposlenikID, cjelobrojna varijabla,
+DatumNarudbe, datumska varijabla,
+KrajnjiDatumIsporuke, datumska varijabla,
+DatumIsporuke, datumska varijabla,
+IsporuciteljID, cjelobrojna varijabla,
+CijenaPrevoza, novčana varijabla,
+NazivNarucitelja, 40 unicode karaktera,
+AdresaNarucitelja, 60 unicode karaktera,
+GradNarucitelja, 15 unicode karaktera,
+RegijaNarucitelja, 15 unicode karaktera,
+PostBrojNarucitelja, 10 unicode karaktera,
+DrzavaNarucitelja, 15 unicode karaktera
+*/
+CREATE DATABASE RadnaBaza
+GO
+USE RadnaBaza
+
+CREATE TABLE Narudzba(
+	NarudzbaID INT CONSTRAINT PK_Narudzba PRIMARY KEY(NarudzbaID),
+	NaruciteljID VARCHAR(5),
+	ZaposlenikID INT,
+	DatumNarudbe DATE,
+	KrajnjiDatumIsporuke DATE,
+	DatumIsporuke DATE,
+	IsporuciteljID INT,
+	CijenaPrevoza MONEY,
+	NazivNarucitelja NVARCHAR (40),
+	AdresaNarucitelja NVARCHAR (60),
+	GradNarucitelja NVARCHAR (15),
+	RegijaNarucitelja NVARCHAR (15),
+	PostBrojNarucitelja NVARCHAR (10),
+	DrzavaNarucitelja NVARCHAR (15)
+)
+
+/*20. U tabelu Narudzbe importovati sve zapise iz tabele Orders baze Northwind
+kod kojih je cijena prevoza manja od 10 i prva dva znaka adrese su cifra ili prazno mjesto,
+a nakon toga slijede znaci koji nisu cifre. U datumske varijable upisati samo datum (bez vremena).
+Također, sve NULL vrijednosti polja ShipRegion zamijeniti sa BH. 
+*/
+
+INSERT INTO Narudzba
+SELECT O.OrderID, O.CustomerID, O.EmployeeID, LEFT(O.OrderDate, 11), LEFT(O.RequiredDate, 11),
+		LEFT(O.ShippedDate, 11), O.ShipVia, O.Freight, O.ShipName, O.ShipAddress, O.ShipCity, 
+		ISNULL(O.ShipRegion, 'BH'), O.ShipPostalCode, O.ShipCountry
+FROM NORTHWND.dbo.Orders O
+WHERE O.Freight < 10 AND (O.ShipAddress LIKE '[0-9]%' AND O.ShipAddress LIKE '__[^0-9]%')
+
+/*21. U tabeli Narudzbe kreirati novu kolonu Broj_u_Ulici u koju će se smjestiti
+ broj iz kolone AdresaNarucitelja, dok će u koloni AdresaNarucitelja biti preostali dio adrese.*/
+
+ALTER TABLE Narudzba
+ADD Br_u_Ulici NVARCHAR(2)
+
+UPDATE Narudzba 
+SET Br_u_Ulici = LEFT(AdresaNarucitelja, 2),
+	AdresaNarucitelja = SUBSTRING(AdresaNarucitelja, 3, 60)
+WHERE Br_u_Ulici IS NULL
+
+/*22. Iz tabele Orders baze Northwind ispisati prvu riječ naziva naručitelja
+ pri čemu treba izostaviti one čiji naziv predstavlja neprekinuti niz znakova.*/
+ USE NORTHWND
+ GO
+ SELECT LEFT(ShipName, CHARINDEX(' ', ShipName))
+ FROM Orders
+ WHERE CHARINDEX(' ', ShipName) <> 0 
+
+ /*23. U tabeli Narudzba kreirati novu kolonu Lozinka. Kolonu popuniti koristeći polja LoginID 
+i HireDate iz tabele HumanResources.Employee baze AdventureWorks2014. 
+Lozinka se formira tako što se spoje datum zaposlenja i ime zaposlenika, 
+te se tako dobijeni string obrne.*/
+USE RadnaBaza
+GO
+ALTER TABLE Narudzba
+ADD Lozinka NVARCHAR(50)
+
+UPDATE Narudzba
+SET Lozinka = REVERSE( CONVERT(NVARCHAR, HireDate) + SUBSTRING(LoginID, 17, LEN(LoginID) - CHARINDEX('\', LoginID) - 1))
+FROM AdventureWorks2014.HumanResources.Employee
+WHERE Lozinka IS NULL
+
+/*24. U tabeli Orders baze Northwind prebrojati koliko ima naručitelja čiji naziv
+ se sastoji iz neprikinutog niza znakova.*/
+SELECT COUNT(ShipName) AS [Broj Narucitelja]
+FROM NORTHWND.dbo.Orders
+WHERE CHARINDEX(' ', ShipName) = 0
+
+/*25.a Kreirati šemu vjezba u bazi podataka Radna.
+
+25.b Kreirati tabelu Autori u šemi vjezba koja će se sastojati od sljedećih polja:
+AutorID, 11 karaktera, primarni ključ, obavezan unos,
+Prezime, 40 karaktera, obavezan unos,
+Ime, 20 karaktera, obavezan unos,
+Telefon, 11 karaktera, obavezan unos,
+Adresa, 11 karaktera,
+Grad, 20 karaktera, 
+Drzava, 2 karaktera,
+PostanskiBroj, 5 karaktera,
+StanjeUgovora, bit polje
+*/
+
+CREATE SCHEMA vjezba 
+
+CREATE TABLE vjezba.Autori(
+	AutorID VARCHAR(11) NOT NULL CONSTRAINT PK_Autori PRIMARY KEY(AutorID), 
+	Prezime varchar(40) NOT NULL,
+	Ime varchar(20) NOT NULL,
+	Telefon char(12) NOT NULL,
+	Adresa varchar(40) NULL,
+	Grad varchar(20) NULL,
+	Drzava char(2) NULL,
+	PostanskiBroj char(5) NULL,
+	StanjeUgovora bit NOT NULL
+)
