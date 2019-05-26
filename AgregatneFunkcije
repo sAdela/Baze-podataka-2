@@ -1,0 +1,73 @@
+/*1. Iz tabele Order Details u bazi Northwind prikazati narudžbe sa najmanjom i
+ najvećom naručenom količinom, ukupan broj narudžbi, ukupan broj naručenih proizvoda,
+te srednju vrijednost naručenih proizvoda.*/
+
+USE NORTHWND
+GO
+
+SELECT MIN(Quantity) Minumum, MAX(Quantity) Maksimum, COUNT(OrderID) BrojNarudzbi,
+		SUM(Quantity) BrojNarucenihProizvoda, AVG(UnitPrice) ProsjecnaCijena
+FROM [Order Details]
+
+/*2. Iz tabele Order Details u bazi Northwind prikazati narudžbe sa najmanjom i najvećom novačanom vrijednošću.*/
+SELECT MIN((UnitPrice - UnitPrice * Discount) *Quantity) NajmanjaVrijednost, MAX((UnitPrice - UnitPrice * Discount)*Quantity) NajvecaVrijednost
+FROM [Order Details]
+
+/*3. Iz tabele Order Details u bazi Northwind prikazati broj narudžbi sa odobrenim popustom.*/
+SELECT COUNT(OrderID) [Broj Narudzbi Sa Odobrenim Popustom]
+FROM [Order Details]
+WHERE Discount > 0 
+
+/*4.a) Iz tabele Orders u bazi Northwind prikazati broj narudžbi u
+		kojima je unijeta regija kupovine.
+	b) Iz tabele Orders u bazi Northwind prikazati broj narudžbi u 
+		kojima nije unijeta regija kupovine.*/
+SELECT COUNT(ShipRegion) [Broj narudžbi u kojem nije unijeta regija kupovine]
+FROM Orders
+
+SELECT COUNT(*) - COUNT(ShipRegion)
+FROM Orders
+
+/*5. Iz tabele Orders u bazi Northwind prikazati ukupan broj narudžbi u 1996. godini.*/
+SELECT COUNT(OrderID)
+FROM Orders
+WHERE YEAR(OrderDate) = 1996
+
+/*6. Iz tabele Orders u bazi Northwind prikazati najniži i najviši trošak prevoza,
+srednju vrijednost troškova prevoza, ukupnu vrijednost troškova prevoza i
+ukupan broj prevoza robe u 1997. godini za robu koja se kupila u Njemačkoj.*/
+SELECT MIN(Freight) MinTrosakPrevoza, MAX(Freight) MaxTrosakPrevoza, AVG(Freight) AvgTrosakPrevoza,
+		SUM(Freight) SumTrosakPrevoza, COUNT(Freight)
+FROM Orders
+WHERE YEAR(OrderDate) = 1997 AND ShipCountry = 'Germany' 
+
+/*7. Iz tabele Orders u bazi Northwind prikazati trošak prevoza ako je veći od 1000 za robu 
+koja se kupila u Francuskoj, Njemačkoj ili Švicarskoj. Rezultate prikazati po državama.*/
+SELECT SUM(Freight), ShipCountry
+FROM Orders
+WHERE ShipCountry IN ('France', 'Germany', 'Switzerland') 
+GROUP BY ShipCountry
+HAVING SUM(Freight) > 1000
+
+/*8. Iz tabele Orders u bazi Northwind prikazati trošak prevoza po državama u kojima je roba 
+kupljena, pri čemu će rezultat biti sortiran rastućim redoslijedom po vrijednosti troška prevoza.*/
+SELECT SUM(Freight), ShipCountry
+FROM Orders
+GROUP BY ShipCountry
+ORDER BY 1
+
+/*9. Iz tabele Orders u bazi Northwind prikazati sve kupce po ID-u kod kojih ukupni troškovi prevoza
+nisu prešli 7500 pri čemu se rezultat treba sortirati opadajućim redoslijedom po visini troškova prevoza.*/
+SELECT CustomerID, SUM(Freight) as TroskoviPrevoza
+FROM Orders
+GROUP BY CustomerID
+HAVING SUM(Freight) < 7500
+ORDER BY 2 DESC
+
+/*10. Iz tabele Orders u bazi Northwind prikazati ukupne troškove prevoza za Belgiju,
+Brazil i SAD uz uslov da su troškovi prevoza bili veći od 5000.*/
+SELECT SUM(Freight), ShipCountry
+FROM Orders
+WHERE ShipCountry IN ('Belgium', 'Brazil', 'USA')
+GROUP BY ShipCountry
+HAVING SUM(Freight) > 5000
