@@ -1,0 +1,30 @@
+/*1. Iz tabela discount i stores baze pubs prikazati naziv popusta, ID i naziv prodavnice*/
+USE pubs
+GO
+
+SELECT S.stor_id, D.discounttype, S.stor_name
+FROM stores S INNER JOIN discounts D
+ON S.stor_id = D.stor_id
+
+/*2. Iz tabela employee i jobs baze pubs prikazati ID i ime uposlenika,
+ID posla i naziv posla koji obavlja*/
+SELECT E.emp_id, E.fname, J.job_id, J.job_desc
+FROM jobs J INNER JOIN employee E
+ON J.job_id = E.job_id
+
+/*4. Iz tabela Customers i Orders baze Northwind prikazati kontakt ime,
+id kupca i broj narudžbe.*/
+USE NORTHWND 
+GO
+
+SELECT C.CustomerID, C.ContactName, O.OrderID
+FROM Customers C INNER JOIN Orders O
+ON C.CustomerID = O.CustomerID
+
+/*7. Upotrebom left outer join naredbe iz tabela Customers i Order baze Northwind 
+prikazati kontakt ime, ID kupca, ID narudžbe pri čemu kupac nije obavio narudžbu.*/
+
+SELECT C.CustomerID, C.ContactName, O.OrderID
+FROM Customers C LEFT JOIN Orders O
+ON C.CustomerID = O.CustomerID
+WHERE O.OrderID IS NULL
