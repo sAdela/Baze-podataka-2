@@ -1,0 +1,134 @@
+/*ZADATAKKreirati novu bazu podataka i imenovati je vlastitim brojem indeksa.
+
+Postavke za data fajl: 
+•	Lokacija: C:\BP2\Data
+•	Veličina: inicijalno 5 MB,
+•	Maksimalna veličina: Bez ograničenja
+•	Uvećanje: 10%
+Kreirati i sekundarnu data datoteku.
+
+Postavke za log fajl:
+•	Lokacija: C:\BP2\Log
+•	Veličina: inicijalno 2 MB,  maksimalna veličina neograničena
+•	Maksimalna veličina: Bez ograničenja
+•	Uvećanje: 5%
+*/
+
+CREATE DATABASE BrojIndeksa ON PRIMARY (
+	NAME = 'BrojIndeksa',
+	FILENAME = 'c:\BP2\data\BrojIndeksa.mdf',
+	SIZE = 5 MB,
+	MAXSIZE = UNLIMITED,
+	FILEGROWTH = 17000%
+),
+(
+	NAME = 'BrojIndeksa.sek',
+	FILENAME = 'c:\BP2\data\BrojIndeksa.sek',
+	SIZE = 5 MB,
+	MAXSIZE = UNLIMITED,
+	FILEGROWTH = 10%
+)
+LOG ON(
+	NAME = 'BrojIndeksa_log',
+	FILENAME = 'C:\BP2\log\BrojIndeksa_log.ldf',
+	SIZE = 2 MB,
+	MAXSIZE = UNLIMITED,
+	FILEGROWTH = 5%
+)
+
+/*ZADATAK 
+U bazi podataka BrojIndeksa kreirati sljedeće tabele:
+•	Studenti
+	-	StudentID		primarni ključ, početna vrijednost 170001, inkrement 1
+	-	Ime						znakovni tip 15 karaktera (obavezan unos),
+	-	Prezime			znakovni tip 20 karaktera (obavezan unos),
+	-	JMBG					znakovni tip 13 karaktera (obavezan unos i jedinstvena vrijednost), 
+	-	DatumRod		 	datumski tip (obavezan unos),
+	-	Email 				znakovni tip 40 karaktera (jedinstvena vrijednost).
+*/
+USE BrojIndeksa
+GO
+
+CREATE TABLE Studenti(
+	StudentID INT NOT NULL CONSTRAINT PK_StudentID PRIMARY KEY(StudentID) IDENTITY(170001, 1),
+	Ime VARCHAR(15) NOT NULL,
+	Prezime VARCHAR(20) NOT NULL,
+	JMBG VARCHAR(13) NOT NULL CONSTRAINT UQ_JMBG UNIQUE NONCLUSTERED CHECK (Len(JMBG)=13),
+	DatumRod DATE NULL,
+	Email NVARCHAR(40) CONSTRAINT UQ_Email UNIQUE NONCLUSTERED
+)
+
+/*•	Testovi
+	-	TestID	primarni ključ, početna vrijednost 1, popunjava se sa inkrementom 1
+	-	Datum	datumski tip za unos datuma i vremena (obavezan unos),
+	-	Naziv 	znakovni tip 50 karaktera (obavezan unos),
+	-	Oznaka	znakovni tip 10 karaktera (obavezan unos i jedinstvena vrijednost),
+	-	Oblast 	znakovni tip 50 karaktera (obavezan unos),
+	-	MaksBrojBod	cjelobrojni tip (obavezan unos),
+*/
+
+CREATE TABLE Testovi(
+	TestID INT NOT NULL CONSTRAINT PK_TestID PRIMARY KEY(TestID) IDENTITY(1,1),
+	Datum DATE NOT NULL,
+	Naziv NVARCHAR(50) NOT NULL,
+	Oznaka NVARCHAR(10) NOT NULL CONSTRAINT UQ_Oznaka UNIQUE NONCLUSTERED,
+	Oblast NVARCHAR(50) NOT NULL,
+	MaksBrojBod INT NOT NULL
+)
+
+/*•	RezultatiTesta
+	-	Polozio  	polje za unos ishoda testiranja – DA/NE (obavezan unos)
+	-	OsvBodovi	polje za unos decimalnog broja (obavezan unos),
+	-	Napomena	polje za unos 100 karaktera.
+Primarni ključ tabele RezultatiTesta formirati kao kombinaciju primarnih 
+ključeva prve dvije tabele.
+
+Napomena: Student može polagati više testova i za svaki test ostvariti 
+određene rezultate, pri čemu student ne može 2 puta polagati isti test. 
+Isti test može polagati više studenata. */
+
+CREATE TABLE RezultatiTesta(
+	StudentID INT NOT NULL,
+	TestID INT NOT NULL,
+	Polozio BIT NOT NULL,
+	OsvBodovi DECIMAL(18, 2),
+	Napomena VARCHAR(100),
+	CONSTRAINT PK_RezultatiTesta PRIMARY KEY(StudentID, TestID),
+	CONSTRAINT FK_RezultatiTesta_Studenti FOREIGN KEY(StudentID) REFERENCES Studenti (StudentID),
+	CONSTRAINT FK_RezultatiTesta_Testovi FOREIGN KEY(TestID) REFERENCES Testovi(TestID)
+)
+
+/* Kreirati referenciranu tabelu Gradovi koja će se referirati na tabelu Studenti
+i sadržavati polja GradID i NazivGrada. 
+Nakon kreiranja tabele Gradovi u tabeli Studenti dodati referencu prema tabeli Gradovi, 
+te polje Adresa dužine 100 znakova.
+*/
+
+CREATE TABLE Gradovi(
+	GradID INT NOT NULL CONSTRAINT PK_Gradovi PRIMARY KEY(GradID) IDENTITY(1,1),
+	NazivGrada NVARCHAR(40)
+)
+
+ALTER TABLE Studenti
+ADD GradID INT NULL CONSTRAINT FK_Studenti_Gradovi FOREIGN KEY(GradID) REFERENCES Gradovi(GradID),
+Adresa VARCHAR(100) NULL
+
+/*ZADATAK
+U tabelu Studenti importovati 10 kupaca iz baze podataka AdventureWorks2014 i to sljedeće kolone:
+
+-	FirstName (Person) -> Ime,
+-	LastName (Person) -> Prezime,
+-	Zadnjih 13 karaktera kolone rowguid (Customer) - crticu zamijeniti brojem 0 -> JMBG,
+-	EmailAddress (EmailAddress) -> Email.
+
+U zagradama su navedeni nazivi tabela. 
+*/
+
+INSERT INTO Studenti (Ime, Prezime, JMBG, Email)
+SELECT TOP 10 P.FirstName, P.LastName, REPLACE(RIGHT(C.rowguid, 13), '-', 0), E.EmailAddress
+FROM AdventureWorks2014.Person.Person P INNER JOIN AdventureWorks2014.Sales.Customer C
+ON C.PersonID = P.BusinessEntityID 
+INNER JOIN AdventureWorks2014.Person.EmailAddress E
+ON E.BusinessEntityID = P.BusinessEntityID
+
+
