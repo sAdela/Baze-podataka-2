@@ -1,0 +1,81 @@
+/*1. Iz tabela Employees, EmployeeTerritories, Territories i Region baze Northwind
+prikazati prezime i ime uposlenika kao polje ime i prezime, teritoriju i regiju
+koju pokrivaju i stariji su od 30 godina.*/
+USE NORTHWND
+GO
+SELECT E.FirstName + E.LastName ImePrezime, R.RegionDescription, T.TerritoryDescription, DATEDIFF(YEAR, E.BirthDate, GETDATE()) Godine
+FROM Employees E INNER JOIN EmployeeTerritories ET
+	ON E.EmployeeID = ET.EmployeeID 
+	INNER JOIN Territories T 
+	ON ET.TerritoryID = T.TerritoryID
+	INNER JOIN Region R
+	ON T.RegionID = R.RegionID
+WHERE DATEDIFF(YEAR, E.BirthDate, GETDATE()) > 30
+
+/*2. Iz tabela Employee, Order Details i Orders baze Northwind prikazati 
+ime i prezime uposlenika kao polje ime i prezime, 
+jediničnu cijenu, količinu i ukupnu vrijednost pojedinačne narudžbe 
+kao polje ukupno za sve narudžbe u 1997. godini, pri čemu će se rezultati 
+sortirati prema novokreiranom polju ukupno.*/
+
+SELECT E.FirstName, E.LastName, OD.UnitPrice, OD.Quantity, (OD.UnitPrice-OD.Discount*OD.UnitPrice)*OD.Quantity Ukupno
+FROM Employees E INNER JOIN Orders O
+	ON O.EmployeeID = E.EmployeeID
+	INNER JOIN [Order Details] OD
+	ON OD.OrderID = O.OrderID
+WHERE YEAR(O.OrderDate) = 1997
+ORDER BY Ukupno
+
+/*3. Iz tabela Employee, Order Details i Orders baze Northwind prikazati ime uposlenika
+ i ukupnu vrijednost svih narudžbi koje je taj uposlenik 
+napravio u 1997. godini ako je ukupna vrijednost veća od 50000, 
+pri čemu će se rezultati sortirati uzlaznim redoslijedom prema polju ime. 
+Vrijednost sume zaokružiti na dvije decimale.*/
+USE NORTHWND
+GO
+SELECT E.FirstName, SUM (ROUND((OD.UnitPrice - OD.Discount*OD.UnitPrice)*OD.Quantity,2)) Ukupno
+FROM Employees E 
+INNER JOIN Orders O ON O.EmployeeID = E.EmployeeID 
+INNER JOIN [Order Details] OD ON OD.OrderID = O.OrderID
+WHERE YEAR(O.OrderDate) = 1997
+GROUP BY E.FirstName
+HAVING SUM((OD.UnitPrice - OD.UnitPrice * OD.Discount) * OD.Quantity) > 50000
+ORDER BY E.FirstName 
+
+/*4. Iz tabela Categories, Products i Suppliers baze Northwind prikazati naziv
+isporučitelja (dobavljača), mjesto i državu isporučitelja (dobavljača) i 
+naziv(e) proizvoda iz kategorije napitaka (pića) kojih na stanju ima više od 30 jedinica.
+Rezultat upita sortirati po državi.*/
+
+SELECT P.ProductName, S.CompanyName, S.City, S.Country
+FROM Categories C INNER JOIN Products P
+ON C.CategoryID = P.CategoryID 
+INNER JOIN Suppliers S
+ON S.SupplierID = P.SupplierID 
+WHERE C.CategoryID = 1 AND P.UnitsInStock > 30
+ORDER BY S.Country
+
+/*5.
+U tabeli Customers baze Northwind ID kupca je primarni ključ. 
+U tabeli Orders baze Northwind ID kupca je vanjski ključ. Dati izvještaj:
+a) koliko je ukupno kupaca evidentirano u bazi Northwind (u obje tabele)
+b) da li su svi kupci obavili narudžbu
+c) koji kupci nisu napravili narudžbu*/
+/*a)*/
+SELECT CustomerID
+FROM Customers
+UNION
+SELECT CustomerID
+FROM Orders
+/*b)*/
+SELECT CustomerID
+FROM Customers
+INTERSECT
+SELECT CustomerID
+FROM Orders
+/*c)*/
+SELECT CustomerID
+FROM Customers
+EXCEPT
+SELECT CustomerID
+FROM Orders
