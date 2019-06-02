@@ -306,3 +306,58 @@ SELECT ProductID, ProductName,
 						FROM Products) [Odstupanje]
 FROM Products
 ORDER BY 3
+
+/*16. Iz tabele Orders baze Nortwind putem podupita dati pregled odstupanja 
+troška prevoza od minimalne i maksimalne vrijednosti troška prevoza.
+Rezultat treba da sadrži datum narudžbe, trošak prevoza, odstupanje od minimalne vrijednosti,
+minimalnu vrijednost, odstupanje od maksimalne vrijednosti i maksimalnu vrijednost,
+pri čemu će trošak prevoza u granicama od 250 do 750. 
+Sortirati po trošku prevoza.*/
+
+
+SELECT OrderDate, Freight, Freight - (SELECT MIN(Freight) FROM Orders) [OdstupanjeMin], 
+	(SELECT MIN(Freight) FROM Orders) Minimum, 
+	Freight - (SELECT MAX(Freight) FROM Orders) [OdstupanjeMax], 
+		(SELECT MAX(Freight) FROM Orders) Maksimum
+FROM Orders
+WHERE Freight BETWEEN 250 AND 750
+ORDER BY 2
+
+/*17. Iz tabele Order Details baze Northwind dati prikaz ID narudžbe, 
+ID proizvoda i jedinične cijene, te razliku cijene proizvoda u odnosu
+na srednju vrijednost cijene za sve proizvode u tabeli. 
+Rezultat sortirati prema vrijednosti razlike u rastućem redoslijedu.*/
+
+SELECT OrderID, ProductID, UnitPrice, UnitPrice - (SELECT ROUND(AVG(UnitPrice), 2) FROM [Order Details]) [Razlika]
+FROM [Order Details]
+ORDER BY 4
+
+/*18. Iz tabele Products baze Northwind za sve proizvoda kojih ima na stanju 
+dati prikaz ID proizvoda, naziv proizvoda i stanje zaliha, 
+te razliku stanja zaliha proizvoda u odnosu na srednju vrijednost stanja 
+za sve proizvode u tabeli. 
+Rezultat sortirati prema vrijednosti razlike u opadajućem redoslijedu.*/
+
+SELECT ProductID, ProductName, UnitsInStock, UnitsInStock - (SELECT AVG(UnitsInStock) FROM Products) [Razlika]
+FROM Products
+ORDER BY 4
+
+/*19. Upotrebom tabela Orders i Order Details baze Northwind prikazati ID narudžbe
+i kupca koji je kupio više od 10 komada proizvoda čiji je ID 15.*/
+
+SELECT OrderID, CustomerID
+FROM Orders O
+WHERE 10 < (SELECT Quantity
+		FROM [Order Details] OD
+		WHERE O.OrderID = OD.OrderID AND OD.ProductID = 15)
+
+/*20. Upotrebom tabela sales i stores baze pubs prikazati ID i naziv prodavnice
+u kojoj je naručeno više od 1 komada publikacije čiji je ID 6871.*/
+USE pubs 
+GO
+
+SELECT S.stor_id, S.stor_name
+FROM stores S
+WHERE 1 < (SELECT SA.qty 
+	FROM sales SA
+	WHERE SA.stor_id = S.stor_id AND SA.ord_num = '6871')
