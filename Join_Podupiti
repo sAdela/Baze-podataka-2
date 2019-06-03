@@ -1,3 +1,22 @@
+/*
+0. Koristeci tabele 
+CountryRegion, 
+StateProvince i 
+Address 
+iz baze podataka AdwentureWorks2014 napraviti izvjestaj koji za svaku drzavu prikazuje: 
+sve njene regione i 
+broj osoba unutar svakog regiona 
+*/
+
+SELECT *
+FROM (SELECT CR.Name [Drzava], SP.Name [Provinca], COUNT(SP.StateProvinceID) [BrojOsoba]
+		FROM Person.CountryRegion CR
+		INNER JOIN Person.StateProvince SP
+		ON SP.CountryRegionCode = CR.CountryRegionCode
+		GROUP BY CR.Name, SP.Name) Q
+
+
+
 /*1. Iz tabela Employees, EmployeeTerritories, Territories i Region baze Northwind
 prikazati prezime i ime uposlenika kao polje ime i prezime, teritoriju i regiju
 koju pokrivaju i stariji su od 30 godina.*/
