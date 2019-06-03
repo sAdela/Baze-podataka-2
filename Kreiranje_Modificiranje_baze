@@ -177,17 +177,17 @@ ukupan broj studenata koji su položili i ukupan broj studenata koji nisu polož
 Uzeti u obzir samo testove na kojima su minimalno dva studenata položila. */
 
 SELECT T.Naziv, T.Datum, (SELECT COUNT(RT.StudentID) 
-							FROM RezultatiTesta RT
-							WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) [Polozili],
-							(SELECT COUNT(RT.StudentID) 
-							FROM RezultatiTesta RT
-							WHERE RT.Polozio = 0 AND RT.TestID = T.TestID) [Nisu polozili]
+				FROM RezultatiTesta RT
+				WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) [Polozili],
+			(SELECT COUNT(RT.StudentID) 
+				FROM RezultatiTesta RT
+				WHERE RT.Polozio = 0 AND RT.TestID = T.TestID) [Nisu polozili]
 FROM RezultatiTesta RT INNER JOIN Testovi T
 ON T.TestID = RT.TestID
 GROUP BY T.Naziv, T.Datum, T.TestID
 HAVING  (SELECT COUNT(RT.StudentID) 
-							FROM RezultatiTesta RT
-							WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) >= 2
+	FROM RezultatiTesta RT
+	WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) >= 2
 
 /*ili */ 
 
