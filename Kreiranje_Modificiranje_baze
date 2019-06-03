@@ -1,4 +1,5 @@
-/*ZADATAKKreirati novu bazu podataka i imenovati je vlastitim brojem indeksa.
+/*ZADATAK
+Kreirati novu bazu podataka i imenovati je vlastitim brojem indeksa.
 
 Postavke za data fajl: 
 •	Lokacija: C:\BP2\Data
@@ -22,8 +23,8 @@ CREATE DATABASE BrojIndeksa ON PRIMARY (
 	FILEGROWTH = 17000%
 ),
 (
-	NAME = 'BrojIndeksa.sek',
-	FILENAME = 'c:\BP2\data\BrojIndeksa.sek',
+	NAME = 'BrojIndeksa_sek',
+	FILENAME = 'c:\BP2\data\BrojIndeksa_sek.ndf',
 	SIZE = 5 MB,
 	MAXSIZE = UNLIMITED,
 	FILEGROWTH = 10%
@@ -131,4 +132,108 @@ ON C.PersonID = P.BusinessEntityID
 INNER JOIN AdventureWorks2014.Person.EmailAddress E
 ON E.BusinessEntityID = P.BusinessEntityID
 
+/*ZADATAK
+a) U tabelu Testovi unijeti minimalno 3 zapisa, 
+b) U tabelu RezultatiTesta unijeti 10 zapisa.
+*/
+USE BrojIndeksa 
+GO
 
+INSERT INTO Testovi
+VALUES ('05.06.2015', 'MS Access', 'MSACC1', 'Baze podataka', 50),
+('06.09.2015', 'SQL Server', 'SQLS1', 'Baze podataka', 70),
+(GETDATE(), 'ASP.NET', 'ASPNET1', 'Web programiranje', 80)
+
+INSERT INTO RezultatiTesta(StudentID, TestID, Polozio, OsvBodovi)
+VALUES (170001, 1, 1, 42),
+(170002, 1, 0, 18),
+(170003, 1, 1, 26),
+(170002, 2, 1, 68),
+(170003, 2, 0, 20),
+(170002, 3, 1, 72),
+(170003, 3, 1, 67),
+(170005, 3, 0, 27),
+(170006, 3, 1, 72),
+(170007, 3, 0, 38)
+
+/*ZADATAK
+Kreirati upit koji prikazuje rezultate testiranja za određeni test (ASPNET1). 
+Kao rezultat upita prikazati sljedeće kolone: Ime i Prezime, jmbg studenta, 
+Datum, Naziv, Oznaku, Oblast i maksimalan broj bodova na testu, te polje položio,
+ osvojene bodove i procentualni rezultat testa.
+*/
+
+SELECT S.Ime, S.Prezime, S.JMBG, T.Datum, T.Oblast, RT.Polozio, RT.OsvBodovi, 
+		CONVERT(DECIMAL(18, 2),(RT.OsvBodovi / T.MaksBrojBod) * 100) [Procent], T.MaksBrojBod
+FROM Testovi T INNER JOIN RezultatiTesta RT
+ON T.TestID = RT.TestID
+INNER JOIN Studenti S 
+ON S.StudentID = RT.StudentID
+WHERE T.Oznaka = 'ASPNET1'
+
+/*ZADATAK
+Uz upotrebu podupita kreirati upit koji prikazuje Naziv testa, Datum održavanja,
+ukupan broj studenata koji su položili i ukupan broj studenata koji nisu položili test.
+Uzeti u obzir samo testove na kojima su minimalno dva studenata položila. */
+
+SELECT T.Naziv, T.Datum, (SELECT COUNT(RT.StudentID) 
+							FROM RezultatiTesta RT
+							WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) [Polozili],
+							(SELECT COUNT(RT.StudentID) 
+							FROM RezultatiTesta RT
+							WHERE RT.Polozio = 0 AND RT.TestID = T.TestID) [Nisu polozili]
+FROM RezultatiTesta RT INNER JOIN Testovi T
+ON T.TestID = RT.TestID
+GROUP BY T.Naziv, T.Datum, T.TestID
+HAVING  (SELECT COUNT(RT.StudentID) 
+							FROM RezultatiTesta RT
+							WHERE RT.Polozio = 1 AND RT.TestID = T.TestID) >= 2
+
+/*ili */ 
+
+SELECT	T.Naziv, T.Datum, COUNT(RT.StudentID) [Polozili],
+		(SELECT COUNT(RT.StudentID)
+		FROM RezultatiTesta RT
+		WHERE RT.Polozio = 0 AND RT.TestID= T.TestID) [Nisu polozili]
+
+FROM Testovi AS T INNER JOIN RezultatiTesta RT
+		ON T.TestID = RT.TestID
+WHERE RT.Polozio = 1
+GROUP BY T.Naziv, T.Datum, T.TestID
+HAVING COUNT(RT.StudentID) >= 2
+
+/*ZADATAK
+Izmijeniti rezultate testiranja svim Studentima koji su položili određeni test (ASPNET1). 
+Svim studentima koji su položili test broj osvojenih bodova uvećati za 5.
+*/
+
+UPDATE RezultatiTesta
+SET OsvBodovi = OsvBodovi + 5
+FROM RezultatiTesta RT INNER JOIN Testovi T
+ON RT.TestID = T.TestID
+WHERE Polozio = 1 AND T.Oznaka = 'ASPNET1'
+
+
+SELECT RT.*
+FROM RezultatiTesta AS RT INNER JOIN Testovi AS T
+	ON RT.TestID = T.TestID
+WHERE Oznaka LIKE 'ASPNET1'
+
+/*ZADATAK
+Obrisati jedan test i ostvarene rezultate na testu (MSACC1).*/
+
+DELETE FROM RezultatiTesta 
+FROM RezultatiTesta RT INNER JOIN Testovi T
+ON T.TestID = RT.TestID
+WHERE T.Oznaka = 'MSACC1'
+
+/*ZADATAK
+Obrisati tabelu Gradovi i ukloniti polja GradID i Adresa u tabeli Studenti.*/
+
+ALTER TABLE Studenti
+DROP CONSTRAINT FK_Studenti_Gradovi
+GO
+ALTER TABLE Studenti
+DROP COLUMN GradID, Adresa
+
+DROP TABLE Gradovi
