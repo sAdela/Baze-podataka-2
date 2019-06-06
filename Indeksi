@@ -1,0 +1,113 @@
+
+
+USE BrojIndeksa
+CREATE TABLE Komisija(
+	Ime		NVARCHAR(30) NOT NULL,
+	Prezime	NVARCHAR(30) NOT NULL, 
+	Titula	NVARCHAR(15) NOT NULL,
+	Telefon	NVARCHAR(15),
+	Email	NVARCHAR(50)
+)
+
+/*ZADATAK
+U tabelu Komisija importovati 10000 osoba iz tabela Person.Person,
+Person.PersonPhone i Person.PersonEmailAddress baze podataka AdventureWorks2014.
+Iz kolone PhoneNumber izdvojiti 7 znakova kao broj telefona.
+NULL vrijednost u tabeli Person.Person zamijeniti vrijednošću nepoznat. 
+Uključiti opciju aktuelni plan izvršenja kako bi se dobio prikaz plana izvršenja upita.*/
+
+USE AdventureWorks2014
+
+INSERT INTO BrojIndeksa.dbo.Komisija (Ime, Prezime, Titula, Telefon, Email)
+SELECT TOP 10000 P.FirstName, P.LastName, ISNULL(P.Title, 'N/A'), LEFT(PP.PhoneNumber, 15), EA.EmailAddress
+FROM Person.Person P 
+INNER JOIN Person.PersonPhone PP
+ON P.BusinessEntityID = PP.BusinessEntityID
+INNER JOIN Person.EmailAddress EA
+ON P.BusinessEntityID = EA.BusinessEntityID
+
+/*ZADATAK
+U tabelu Komisija dodati primarni ključ pod nazivom ClanKomisijeID (automatsko 
+generiranje vrijednosti sa inkrementom 1), te provjeriti aktualni plan izvršenja.*/
+USE BrojIndeksa
+GO
+
+ALTER TABLE Komisija
+ADD ClanKomisijeID INT CONSTRAINT PK_ClanKomisijeID PRIMARY KEY(ClanKomisijeID) IDENTITY (1,1)
+
+/*ZADATAK
+Tabelu Komisija povezati sa tabelom Testovi many-to-many relacijom 
+kreiranjem tabele PredmetneKomisije.
+
+Tabela će se sastojati od polja: ImeClana, PrezimeClana, NazivTesta, OznakaTesta.
+Primarni ključ kreirati kao kompozitni ključ sastavljen od ključeva iz tabela
+Testovi i PredmetneKomisije. 
+
+U kreiranu tabelu importovati podatke kod kojih je ID člana komisije jednak ID testa.*/
+
+CREATE TABLE Testovi(
+	TestID INT CONSTRAINT PK_Testovi PRIMARY KEY(TestID) IDENTITY(1,1),
+	NazivTesta NVARCHAR(30)
+)
+
+
+CREATE TABLE PredmetneKomisije(
+	TestID INT NOT NULL,
+	ClanKomisijeID INT NOT NULL,
+	ImeClana NVARCHAR (30) NOT NULL,
+	PrezimeClana NVARCHAR (30) NOT NULL,
+	NazivTesta NVARCHAR (50) NOT NULL,
+	OznakaTesta NVARCHAR (10) NOT NULL,
+	CONSTRAINT PK_PredmetneKomisije PRIMARY KEY(TestID, ClanKomisijeID),
+	CONSTRAINT FK_PredmetneKomisije_Testovi FOREIGN KEY (TestID) REFERENCES Testovi(TestID),
+	CONSTRAINT FK_PredmetneKomisije_Komisija FOREIGN KEY (ClanKomisijeID) REFERENCES Komisija (ClanKomisijeID)
+)
+
+/*U kreiranu tabelu importovati podatke kod kojih je ID člana komisije jednak ID testa.*/
+
+
+INSERT INTO PredmetneKomisije 
+		(ClanKomisijeID, TestID, ImeClana, PrezimeClana, NazivTesta, OznakaTesta)
+SELECT K.ClanKomisijeID, T.TestID, K.Ime, K.Prezime, T.NazivTesta, T.OznakaTesta
+FROM Komisija AS K INNER JOIN Testovi AS T
+		ON K.ClanKomisijeID = T.TestID
+
+/*ZADATAK
+Kreirati prosti nonclustered indeks na polju telefon tabele Komisija
+i insert upitom analizirati aktualni plan izvršenja.*/
+
+CREATE NONCLUSTERED INDEX IX_Komisija
+ON Komisija (Telefon ASC)
+
+/*ZADATAK
+Kreirati kompozitni nonclustered indeks sastavljen od kolona (polja)
+ime i prezime i insert upitom testirati primjenu indeksa, 
+provjeravajući aktualni plan izvršenja.*/
+
+CREATE NONCLUSTERED INDEX IX_Kompozitni
+ON Komisija (Prezime ASC, Ime ASC)
+
+
+/*ZADATAK
+Kreirati unique nonclustered indeks nad tabelom Komisija,
+polje Email. Insert komandom testirati funkcionalnost prethodno kreiranog indeksa,
+provjeravajući aktualni plan izvršenja.*/
+
+CREATE UNIQUE NONCLUSTERED INDEX IX_UQ_Komisija
+ON Komisija (Email DESC)
+
+/*ZADATAK
+U tabeli discount baze pubs izvršiti unos podataka stor_id. 
+Za popust od 10.50 stor_id postaviti na 7067, a za 6.70 postaviti na 7131. 
+Provjeriti aktuelni plan izvršenja.*/
+
+USE pubs
+GO
+
+UPDATE discounts
+SET stor_id = 7067
+WHERE discount = 10.50
+
+UPDATE discounts 
+SET stor_id = 7131
+WHERE discount = 6.70
