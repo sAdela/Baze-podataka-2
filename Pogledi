@@ -1,0 +1,263 @@
+/*ZADATAK
+Iz tabela HumanResources.Employee i Person.Person baze AdventureWokrs2014 kreirati pogled 
+(view) koji će sadržavati sljedeća polja:
+* BusinessEntityID imenovati kao ZaposlenikID
+* FirstName imenovati kao Ime
+* LastName imenovati kao Prezime
+Rezultat sortirati prema ZaposlenikID.*/
+
+USE AdventureWorks2014
+GO
+
+CREATE VIEW HumanResources.view_Employee
+AS 
+	SELECT E.BusinessEntityID [ZaposlenikID], P.FirstName [Ime], P.LastName [Prezime]
+	FROM HumanResources.Employee E INNER JOIN Person.Person P
+	ON E.BusinessEntityID = P.BusinessEntityID
+
+SELECT * FROM HumanResources.view_Employee
+ORDER BY ZaposlenikID
+
+/*ZADATAK
+U bazi AdventurerWorks2014 kreirati tabele Uposlenik i Osoba. 
+
+Tabela Uposlenik će sadržavati sljedeća polja: 
+- UposlenikID numeričko polje,
+- NacionalniID znakovno polje dužine 15, obavezan unos
+- LoginID znakovno polje dužine 256 znakova, obavezan unos
+- RadnoMjesto znakovno polje dužine 50 znakova, obavezan unos
+ 
+Tabela Osoba će sadržavati sljedeća polja
+- OsobaID numeričko polje
+- VrstaUposlenika znakovno polja dužine 2 znaka, obavezan unos
+- Prezime znakovno polje dužine 50 znakova, obavezan unos
+- Ime znakovno polje dužine 50 znakova, obavezan unos
+
+Nakon kreiranja tabela u tabelu Uposlenik kopirati odgovarajuće zapise iz tabele 
+HumanResources.Employee uposlenika koji su zaposleni kao menadžeri. 
+U tabelu Osoba kopirati odgovarajuće podatke iz tabele Person.Person osoba 
+koji su evidentirani kao uposlenik. (VrstaUposlenika je EM).*/
+
+CREATE TABLE Uposlenik (
+	UposlenikID INT,
+	NacionalniID NVARCHAR(15) NOT NULL,
+	LoginID NVARCHAR(256) NOT NULL,
+	RadnoMjesto NVARCHAR(50) NOT NULL
+)
+CREATE TABLE Osoba (
+	OsobaID INT,
+	VrstaUposlenika NVARCHAR(2) NOT NULL,
+	Prezime NVARCHAR(50) NOT NULL,
+	Ime NVARCHAR(50) NOT NULL
+)
+
+
+INSERT INTO Uposlenik (UposlenikID, NacionalniID, LoginID, RadnoMjesto)
+SELECT BusinessEntityID, NationalIDNumber, LoginID, JobTitle
+FROM HumanResources.Employee 
+WHERE JobTitle LIKE '%Man%'
+
+INSERT INTO Osoba(OsobaID, VrstaUposlenika, Prezime, Ime)
+SELECT BusinessEntityID, PersonType, LastName, FirstName
+FROM Person.Person
+WHERE PersonType = 'EM'
+
+/*ZADATAK
+Kreirati pogled (view) nad tabelama Uposlenik i Osoba koji će sadržavati sva polja obje tabele.
+UposlenikID i OsobaID su polja koja sadržavaju iste vrijednosti.*/
+
+CREATE VIEW dbo.vUposlenik
+	AS
+	SELECT U.*, O.*
+	FROM Uposlenik U INNER JOIN Osoba O 
+	ON U.UposlenikID = O.OsobaID
+SELECT * FROM dbo.vUposlenik
+
+/*ZADATAK
+Koristeći tabele Employees, EmployeeTerritories, Territories i Region baze Northwind 
+kreirati pogled view_Employee koji će sadržavati prezime i ime uposlenika kao polje 
+ime i prezime, teritoriju i regiju koju pokrivaju i stariji su od 30 godina.*/
+USE NORTHWND
+GO
+CREATE VIEW view_Employee 
+AS
+	SELECT E.FirstName + ' ' + E.LastName [ImePrezime], 
+				T.TerritoryDescription [Teritorija], R.RegionDescription [Regija]
+	FROM Employees E INNER JOIN EmployeeTerritories ET
+	ON E.EmployeeID = ET.EmployeeID 
+	INNER JOIN Territories T 
+	ON ET.TerritoryID = T.TerritoryID 
+	INNER JOIN Region R
+	ON R.RegionID = T.RegionID
+	WHERE YEAR(GETDATE()) - YEAR(E.BirthDate) > 30 
+
+SELECT * FROM view_Employee
+
+/*ZADATAK
+Koristeći tabele Employee, Order Details i Orders baze Northwind kreirati pogled 
+view_Employee1 koji će sadržavati ime i prezime uposlenika kao polje ime i prezime, 
+jediničnu cijenu, količinu i ukupnu vrijednost pojedinačne narudžbe kao polje ukupno 
+za sve narudžbe u 1997. godini.*/
+
+CREATE VIEW view_Employee1 
+AS
+	SELECT E.FirstName + ' ' + E.LastName [ImePrezime], OD.UnitPrice, OD.Quantity, (OD.UnitPrice - OD.UnitPrice * OD.Discount)*OD.Quantity [Ukupno]
+	FROM Employees E INNER JOIN Orders O
+	ON E.EmployeeID = O.EmployeeID 
+	INNER JOIN [Order Details] OD
+	ON O.OrderID = OD.OrderID
+	WHERE YEAR(O.OrderDate) = 1997
+
+/*ZADATAK
+Koristeći tabele Employee, Order Details i Orders baze Northwind kreirati pogled view_Employee2
+koji će sadržavati ime uposlenika i ukupnu vrijednost svih narudžbi koje je taj uposlenik
+napravio u 1996. godini ako je ukupna vrijednost veća od 1000, 
+pri čemu će se rezultati sortirati uzlaznim redoslijedom prema polju ime. 
+Vrijednost sume zaokružiti na dvije decimale.*/
+CREATE VIEW view_Employee2
+AS
+	SELECT E.FirstName, SUM (ROUND((OD.UnitPrice-OD.Discount*OD.UnitPrice)*OD.Quantity,2)) [Ukupno]
+	FROM Employees E INNER JOIN Orders O
+	ON E.EmployeeID = O.EmployeeID 
+	INNER JOIN [Order Details] OD
+	ON O.OrderID = OD.OrderID
+	WHERE YEAR(O.OrderDate) = 1996
+	GROUP BY E.FirstName
+	HAVING SUM( (OD.UnitPrice-OD.Discount*OD.UnitPrice) *OD.Quantity) > 1000
+
+SELECT * FROM view_Employee2
+
+/*ZADATAK
+Koristeći tabele Categories, Products i Suppliers baze Northwind kreirati pogled 
+view_Categories koji će sadržavati naziv isporučitelja (dobavljača), 
+mjesto i državu isporučitelja (dobavljača) i naziv(e) proizvoda iz kategorije napitaka (pića)
+kojih na stanju ima više od 30 jedinica.*/
+
+
+CREATE VIEW view_Categories AS
+SELECT P.ProductName, P.UnitsInStock, S.CompanyName, S.City, S.Country
+FROM Suppliers AS S INNER JOIN Products AS P
+ON S.SupplierID = P.SupplierID
+INNER JOIN Categories AS C
+ON C.CategoryID = P.CategoryID
+WHERE C.CategoryID = 1 AND P.UnitsInStock > 30
+
+SELECT * FROM view_Categories
+
+/*ZADATAK
+U pogledu view_UposlenikOsoba postaviti indeks na polje ID, 
+a zatim prikazati sadržaj pogleda uz prikaz plana izvršavanja i uporediti
+ga sa planom izvršavanja kada ni jedno polje nije indeksirano.*/
+
+CREATE UNIQUE CLUSTERED IX_ID 
+ON dbo.view_UposlenikOsoba(ID)
+
+/*ZADATAK
+Kreirati tabelu UposlenikTemp koja će se sastojati od kolona (polja) UposlenikID, 
+NacionalniID, LoginID, RadnoMjesto, a zatim iz pogleda view_UposlenikOsoba kopirati 
+sve podatke iz kolona (polja) ID, NacionalniID, LoginID i RadMj 
+pri čemu je radno mjesto manager.*/
+
+CREATE TABLE UposlenikTemp (
+	UposlenikID INT, 
+	NacionalniID NVARCHAR (15) NOT NULL,
+	LoginID NVARCHAR (256) NOT NULL, 
+	RadnoMjesto NVARCHAR (50) NOT NULL
+)
+
+INSERT INTO dbo.UposlenikTemp(UposlenikID, NacionalniID, LoginID, RadnoMjesto)
+SELECT vUO.UposlenikID, vUO.NacionalniID, vUO.LoginID, vUO.RadnoMjesto
+FROM AdventureWorks2014.dbo.vUposlenik AS vUO
+WHERE RadnoMjesto LIKE '%man%'
+
+/*ZADATAK
+Kreirati tabele UposlenikZDK i UposlenikHNK koje će formirati pogled view_part_UposlenikKantoni.
+Obje tabele će sadržavati polja UposlenikID, NacionalniID, LoginID, RadnoMjesto i Kanton. 
+Sva polja su obavezan unos. Tabela UposlenikZDK će se označiti brojem 1, 
+a tabela UposlenikHNK brojem 2.*/
+
+USE AdventureWorks2014
+CREATE TABLE UposlenikZDK (
+	UposlenikID	INT NOT NULL, 
+	NacionalniID NVARCHAR (15) NOT NULL,
+	LoginID NVARCHAR (256) NOT NULL, 
+	RadnoMjesto	NVARCHAR (50) NOT NULL,
+	Kanton SMALLINT NOT NULL CONSTRAINT CK_Kanton_K1 CHECK (Kanton = 1)
+	CONSTRAINT PK_Kantoni_K1 PRIMARY KEY (UposlenikID, Kanton)
+)
+
+USE AdventureWorks2014
+CREATE TABLE UposlenikHNK (
+	UposlenikID	INT NOT NULL, 
+	NacionalniID NVARCHAR (15) NOT NULL,
+	LoginID NVARCHAR (256) NOT NULL, 
+	RadnoMjesto	NVARCHAR (50) NOT NULL,
+	Kanton SMALLINT NOT NULL CONSTRAINT CK_Kanton_K2 CHECK (Kanton = 2)
+	CONSTRAINT PK_Kantoni_K2 PRIMARY KEY (UposlenikID, Kanton)
+)
+
+/*ZADATAK
+Kreirati dijeljeni pogled (partitioned view) view_part_UposlenikKantoni koji će podatke 
+koji se unose u njega distribuirati u tabele UposlenikZDK i UposlenikHNK. 
+Nakon kreiranja u pogled ubaciti 4 podatka, po dva za svaku od tabela. 
+(Tabela UposlenikZDK ima oznaku 1, a UposlenikHNK oznaku 2).*/
+
+USE AdventureWorks2014
+GO
+CREATE VIEW dbo.view_part_UposlenikKantoni WITH SCHEMABINDING AS
+SELECT UposlenikID, NacionalniID, LoginID, RadnoMjesto, Kanton FROM dbo.UposlenikZDK
+UNION ALL
+SELECT UposlenikID, NacionalniID, LoginID, RadnoMjesto, Kanton FROM dbo.UposlenikHNK
+
+INSERT INTO dbo.view_part_UposlenikKantoni 
+							VALUES(100,'zdk1', 'ze1', 'domaćin_zdk1',1)
+INSERT INTO dbo.view_part_UposlenikKantoni 
+							VALUES(101,'zdk2', 'ze2', 'domaćin_zdk2',1)
+INSERT INTO dbo.view_part_UposlenikKantoni 
+							VALUES(10,'hnk1', 'mo1', 'domaćin_hnk1',2)
+INSERT INTO dbo.view_part_UposlenikKantoni 
+							VALUES(11,'hnk2', 'mo2', 'domaćin_hnk2',2)
+
+SELECT * FROM dbo.view_part_UposlenikKantoni
+
+SELECT * FROM UposlenikZDK
+
+SELECT * FROM UposlenikHNK
+
+/*ZADATAK
+Kreirati tabele Kvartal1 i Kvatal2 koje će formirati pogled view_part_ProdajaKvartali. 
+Obje tabele će sadržavati polja ProdajaID, NazivKupca, Kvartal. Sva polja su obavezan unos. 
+Tabela Kvartal1 će se označiti brojem 1, a tabela Kvartal2 brojem 2.
+Kreirati dijeljeni pogled (partitioned view) view_part_ProdajaKvartali 
+koji će podatke koji se unose u njega distribuirati u tabele Kvartal1 i Kvartal2.
+Nakon kreiranja u pogled ubaciti 4 podatka, po dva za svaku od tabela. 
+(Tabela Kvartal1 ima oznaku 1, a Kvartal2 oznaku 2).*/
+
+CREATE TABLE Kvartal1(
+	ProdajaID INT NOT NULL,
+	NazivKupca NVARCHAR(30) NOT NULL,
+	Kvartal SMALLINT NOT NULL CONSTRAINT CHK_Kvartal CHECK (Kvartal = 1),
+	CONSTRAINT PK_Kvartal1_0 PRIMARY KEY(ProdajaID, Kvartal)
+)
+CREATE TABLE Kvartal2(
+	ProdajaID INT NOT NULL,
+	NazivKupca NVARCHAR(30) NOT NULL,
+	Kvartal SMALLINT NOT NULL CONSTRAINT CHK_Kvartal1 CHECK (Kvartal = 2),
+	CONSTRAINT PK_Kvartal1_1 PRIMARY KEY(ProdajaID, Kvartal)
+)
+CREATE VIEW view_part_ProdajaKvartali WITH SCHEMABINDING 
+AS
+	SELECT ProdajaID, NazivKupca, Kvartal FROM dbo.Kvartal1
+	UNION ALL
+	SELECT ProdajaID, NazivKupca, Kvartal FROM dbo.Kvartal2
+
+INSERT INTO dbo.view_part_ProdajaKvartali VALUES(100,'Trgovina1-1',1)
+INSERT INTO dbo.view_part_ProdajaKvartali VALUES(10,'Trgovina2-1',2)
+INSERT INTO dbo.view_part_ProdajaKvartali VALUES(11,'Trgovina2-2',2)
+INSERT INTO dbo.view_part_ProdajaKvartali VALUES(101,'Trgovina1-2',1)
+
+SELECT * FROM dbo.view_part_ProdajaKvartali
+
+SELECT * FROM Kvartal1
+
+SELECT * FROM Kvartal2
