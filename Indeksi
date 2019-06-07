@@ -1,6 +1,19 @@
+/*ZADATAK
+Unutar baze podataka BrojIndeksa kreirati tabelu Komisija sa sljedećim poljima:
+
+•	Ime					polje za unos 30 karaktera (obavezan unos)
+•	Prezime		polje za unos 30 karaktera (obavezan unos)
+•	Titula			polje za unos 15 karaktera,
+•	Telefon		polje za unos 20 karaktera,
+•	Email			polje za unos 50 karaktera.
+
+Tabelu kreirati bez primarnog ključa.*/
+
+CREATE DATABASE BrojIndeksa
 
 
 USE BrojIndeksa
+GO
 CREATE TABLE Komisija(
 	Ime		NVARCHAR(30) NOT NULL,
 	Prezime	NVARCHAR(30) NOT NULL, 
@@ -111,3 +124,114 @@ WHERE discount = 10.50
 UPDATE discounts 
 SET stor_id = 7131
 WHERE discount = 6.70
+
+/*ZADATAK
+Kreirati upit koji će iz tabela discounts, sales, stores i titles baze pubs na 
+osnovu informacije o visini popusta (discount) prikazati sljedeća polja: 
+tip popusta, naziv trgovine, grad, datum narudžbe, količinu, naziv djela i 
+književni žanr djela - tip. Popust je veći od 5. 
+Rezultat sortirati po književnom žanru. Evidentirati aktuelni plan izvršenja.*/
+
+USE pubs
+GO
+
+SELECT D.discounttype, S.stor_name, S.city, SA.ord_date, SA.qty, T.title, T.type
+FROM discounts D INNER JOIN stores S
+ON D.stor_id = S.stor_id
+INNER JOIN sales SA ON SA.stor_id = S.stor_id
+INNER JOIN titles T ON SA.title_id = T.title_id
+WHERE D.discount > 5 
+ORDER BY T.type
+
+
+/*ZADATAK
+Kreirati upit koji će iz tabela discounts, sales, stores i titles baze pubs 
+na osnovu informacije o visini popusta (discount) prikazati sljedeća polja: 
+tip popusta, naziv trgovine, grad, datum narudžbe, količinu, naziv djela i književni žanr 
+djela - tip. Popust je manji ili jednak od 5. 
+Rezultat sortirati po književnom žanru. Evidentirati aktuelni plan izvršenja.*/
+
+
+SELECT D.discounttype, S.stor_name, S.city, SA.ord_date, SA.qty, T.title, T.type
+FROM discounts D INNER JOIN stores S
+ON D.stor_id = S.stor_id
+INNER JOIN sales SA ON SA.stor_id = S.stor_id
+INNER JOIN titles T ON SA.title_id = T.title_id
+WHERE D.discount <= 5
+ORDER BY T.type
+
+/*ZADATAK
+Nad bazom podataka Northwind kreirati 5 složenijih upita primjenom različitih elemenata 
+SELECT komande. Uključiti prikaz plana izvršenja i analizirati komentare. 
+Primjenom alata SQL Server Profiler kreirati novi trace, 
+izvršiti kreirane upite te dobiveni rezultat sačuvati.	
+Iz tabela Customers i Orders u bazi Northwind za narudžbe izvršene u 1997. 
+godini prikazati ime naručitelja (kupca) i ukupnu vrijednost troška prevoza po naručitelju.*/
+
+USE NORTHWND
+GO
+
+SELECT C.ContactName, SUM(O.Freight) [CijenaPrijevoza]
+FROM Customers AS C INNER JOIN Orders AS O
+ON C.CustomerID = O.CustomerID
+WHERE YEAR(O.OrderDate) = 1997 
+GROUP BY C.ContactName
+ORDER BY C.ContactName
+
+/*Iz tabela Employees, EmployeeTerritories, Territories i Region baze Northwind 
+prikazati prezime i ime uposlenika kao polje ime i prezime, teritoriju i regiju
+koju pokrivaju i stariji su od 30 godina.*/
+
+SELECT YEAR(GETDATE()) - YEAR(E.BirthDate) [Godine], E.LastName + ' ' + E.FirstName [Ime i Prezime], T.TerritoryDescription, R.RegionDescription
+FROM Employees E INNER JOIN EmployeeTerritories ET
+ON E.EmployeeID = ET.EmployeeID 
+INNER JOIN Territories T
+ON ET.TerritoryID = T.TerritoryID
+INNER JOIN Region R
+ON T.RegionID = R.RegionID
+WHERE YEAR(GETDATE()) - YEAR(E.BirthDate) > 30
+
+/*Iz tabela Employee, Order Details i Orders baze Northwind prikazati ime i prezime
+uposlenika kao polje ime i prezime, jediničnu cijenu, količinu i ukupnu vrijednost 
+pojedinačne narudžbe kao polje ukupno za sve narudžbe u 1997. godini, 
+pri čemu će se rezultati sortirati prema novokreiranom polju ukupno.*/
+
+
+SELECT E.LastName + ' ' + E.FirstName [Ime i Prezime], OD.UnitPrice, OD.Quantity,
+	(OD.UnitPrice - OD.UnitPrice * OD.Discount) * OD.Quantity [UkupnaCijena], OD.Discount
+FROM Employees E INNER JOIN Orders O
+ON E.EmployeeID = O.EmployeeID 
+INNER JOIN [Order Details] OD
+ON O.OrderID = OD.OrderID
+WHERE YEAR(O.OrderDate) = 1997
+ORDER BY 4
+
+/*Iz tabela Employee, Order Details i Orders baze Northwind prikazati ime uposlenika
+i ukupnu vrijednost svih narudžbi koje je taj uposlenik napravio u 1996.
+godini ako je ukupna vrijednost veća od 1000, 
+pri čemu će se rezultati sortirati uzlaznim redoslijedom prema polju ime. 
+Vrijednost sume zaokružiti na dvije decimale.*/
+
+SELECT E.FirstName, SUM(ROUND( (OD.UnitPrice - OD.UnitPrice * OD.Discount) * OD.Quantity, 2)) [UkupnaSuma]
+FROM Employees E INNER JOIN Orders O
+ON E.EmployeeID = O.EmployeeID 
+INNER JOIN [Order Details] OD
+ON O.OrderID = OD.OrderID
+WHERE YEAR(O.OrderDate) = 1996
+GROUP BY E.FirstName
+HAVING SUM((OD.UnitPrice - OD.UnitPrice * OD.Discount) * OD.Quantity) > 1000
+ORDER BY 1
+
+/*Iz tabela Categories, Products i Suppliers baze Northwind prikazati naziv isporučitelja 
+(dobavljača), mjesto i državu isporučitelja (dobavljača) i naziv(e) proizvoda 
+iz kategorije napitaka (pića) kojih na stanju ima više od 30 jedinica. 
+Rezultat upita sortirati po državi.*/
+
+SELECT S.CompanyName, S.City, S.Country, P.ProductName
+FROM Categories C 
+INNER JOIN Products P
+ON C.CategoryID = P.CategoryID 
+INNER JOIN Suppliers S
+ON S.SupplierID = P.SupplierID
+WHERE C.CategoryID = 1 AND P.UnitsInStock > 30 
+ORDER BY 3 
