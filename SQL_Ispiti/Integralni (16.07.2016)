@@ -238,8 +238,8 @@ AS
 	BEGIN
 		DELETE FROM SkladisteProizvodi
 		WHERE ProizvodID = (SELECT ProizvodID
-								FROM Proizvodi
-								WHERE Sifra = @sifraProizvoda)
+					FROM Proizvodi
+					WHERE Sifra = @sifraProizvoda)
 		DELETE FROM Proizvodi
 		WHERE Sifra = @sifraProizvoda
 	END
