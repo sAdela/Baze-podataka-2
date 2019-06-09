@@ -297,5 +297,5 @@ BACKUP DATABASE BrojIndeksa
 TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\BrojIndeksa.bak'
 
 BACKUP DATABASE BrojIndeksa
-TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\BrojIndeksa.bak'
+TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\BrojIndeksaDiff.bak'
 WITH DIFFERENTIAL 
