@@ -1,0 +1,389 @@
+/*PregledProizvoda
+Kreirati proceduru nad tabelama Production.Product, Production.ProductSubcategory, 
+Production.ProductListPriceHistory, Purchasing.ProductVendor 
+kojom će se definirati parametri: p_name za naziv proizvoda, Color, ps_name 
+za naziv potkategorije, ListPrice sa zaokruživanjem na dvije decimale, 
+AverageLeadTime, MinOrderQty, MaxOrderQty i Razlika kao razliku maksimalne i 
+minimalne naručene količine. Dati odgovarajuće nazive.
+Proceduru kreirati tako da je prilikom izvršavanja moguće unijeti bilo 
+koji broj parametara (možemo ostaviti bilo koji parametar bez unijete vrijednosti), 
+odnosno da procedura daje rezultat ako je unijeta vrijednost za bilo koji parametar.
+Zapisi u proceduri trebaju biti sortirani po vrijednostima parametra ListPrice.
+
+Nakon kreiranja pokrenuti proceduru za sljedeće vrijednosti parametara:
+1. MaxOrderQty = 1000
+2. Razlika = 350
+3. Color = Red i naziv potkategorije = Helmets*/
+USE AdventureWorks2014
+GO
+CREATE PROCEDURE PregledProizvoda (
+	@p_name NVARCHAR(50) = NULL,
+	@Color NVARCHAR(15) = NULL,
+	@ps_name NVARCHAR(50) = NULL,
+	@ListPrice MONEY = NULL,
+    @AverageLeadTime INT = NULL,
+    @MinOrderQty INT = NULL,
+	@MaxOrderQty INT = NULL,
+	@Razlika INT = NULL
+)
+AS
+BEGIN
+	SELECT P.Name [NazivProizvoda], P.Color [Boja], PS.Name [NazivPotkategorije],
+	 ROUND (PLPH.ListPrice,2)[CijenaProizvoda],
+		PV.AverageLeadTime [ProsjecnoVrijemeIsporuke], PV.MinOrderQty [MinKolicina],
+		PV.MaxOrderQty [MaksKolicina], PV.MaxOrderQty - PV.MinOrderQty [Razlika]
+	FROM Production.Product AS P INNER JOIN Production.ProductListPriceHistory AS PLPH
+	ON P.ProductID = PLPH.ProductID 
+	INNER JOIN Production.ProductSubcategory AS PS
+	ON P.ProductSubcategoryID = PS.ProductSubcategoryID 
+	INNER JOIN Purchasing.ProductVendor AS PV
+	ON P.ProductID = PV.ProductID
+	WHERE P.Name = @p_name OR 
+	P.Color = @Color OR
+	PS.Name = @ps_name OR 
+	PLPH.ListPrice = @ListPrice OR
+	PV.AverageLeadTime = @AverageLeadTime OR
+	PV.MinOrderQty = @MinOrderQty OR 
+	PV.MaxOrderQty = @MaxOrderQty OR
+	PV.MaxOrderQty - PV.MinOrderQty = @Razlika
+ORDER BY 4
+END
+
+EXEC PregledProizvoda @MaxOrderQty = 1000
+EXEC PregledProizvoda @Razlika = 350
+EXEC PregledProizvoda @Color = 'Red', @ps_name = 'Helmets'
+   
+
+/*PregledProizvoda1
+Kreirati proceduru nad tabelama Production.Product, Production.ProductSubcategory, 
+Production.ProductListPriceHistory, Purchasing.ProductVendor kojom će se definirati parametri:
+p_name za naziv proizvoda, Color, ps_name za naziv potkategorije, 
+ListPrice sa zaokruživanjem na dvije decimale, AverageLeadTime, MinOrderQty, 
+MaxOrderQty i Razlika kao razliku maksimalne i minimalne naručene količine, 
+pri čemu je jedan od uslova da je Razlika veća od 500. Dati odgovarajuće nazive poljima.
+
+Proceduru kreirati tako da je prilikom izvršavanja moguće unijeti bilo koji broj parametara 
+(možemo ostaviti bilo koji parametar bez unijete vrijednosti), odnosno da procedura daje 
+rezultat ako je unijeta vrijednost za bilo koji parametar.
+Zapisi u proceduri trebaju biti sortirani po vrijednostima parametra Razlika i ListPrice.
+
+Nakon kreiranja pokrenuti proceduru bez postavljanja vrijednosti za bilo koji parametar, a zatim za sljedeće vrijednosti parametara:
+1. MinOrderQty = 100 
+2. Color = Red
+3. ps_name= Helmets*/
+
+CREATE PROCEDURE PregledProizvoda1(
+	@p_name NVARCHAR(50) = NULL,
+	@Color NVARCHAR (15) = NULL,
+    @ps_name NVARCHAR (50) = NULL,
+    @ListPrice MONEY = NULL,
+    @AverageLeadTime INT = NULL,
+    @MinOrderQty INT = NULL,
+	@MaxOrderQty INT = NULL,
+	@Razlika INT = NULL
+)
+AS
+	BEGIN
+		SELECT P.Name [NazivProizvoda], P.Color [Boja], PS.Name [NazivPotkategorije],
+		 ROUND (PLLH.ListPrice,2) [CijenaProizvoda],
+			PV.AverageLeadTime [ProsjecnoVrijemeIsporuke], PV.MinOrderQty [MinKolicina],
+				PV.MaxOrderQty [MaksKolicina], PV.MaxOrderQty - PV.MinOrderQty [Razlika]
+		FROM Production.Product P INNER JOIN Production.ProductSubcategory PS
+		ON P.ProductSubcategoryID = PS.ProductSubcategoryID
+		INNER JOIN Production.ProductListPriceHistory PLLH 
+		ON PLLH.ProductID = P.ProductID
+		INNER JOIN Purchasing.ProductVendor PV
+		ON PV.ProductID = P.ProductID
+		WHERE P.Name = @p_name OR  P.Color = @Color OR PS.Name = @ps_name 
+		OR PLLH.ListPrice = @ListPrice OR PV.AverageLeadTime = @AverageLeadTime 
+		OR PV.MinOrderQty = @MinOrderQty OR 
+		PV.MaxOrderQty = @MaxOrderQty OR
+		PV.MaxOrderQty - PV.MinOrderQty > 500
+ORDER BY 8,4
+END
+
+EXEC PregledProizvoda1 
+EXEC PregledProizvoda1 @MinOrderQty = 100 
+EXEC PregledProizvoda1 @Color = 'Red'
+EXEC PregledProizvoda1 @ps_name = 'Helmets'
+
+/*CountMaksKolicine
+
+Kreirati proceduru nad tabelama Production.Product, Production.ProductSubcategory, 
+Purchasing.ProductVendor kojom će se definirati parametri: p_name za naziv proizvoda, 
+Color, ps_name za naziv potkategorije i count_AverageLeadTime za pregled ukupnog 
+broja prosječnih vremena isporuke. Dati odgovarajuće nazive poljima.
+
+Proceduru kreirati tako da je prilikom izvršavanja moguće unijeti bilo koji broj 
+parametara (možemo ostaviti bilo koji parametar bez unijete vrijednosti), 
+te da procedura daje rezultat ako je unijeta vrijednost za bilo koji parametar.
+
+Nakon kreiranja zasebno pokrenuti proceduru za navedene vrijednosti 1, 2 i 3 parametra 
+count_AverageLeadTime.*/
+
+
+CREATE PROCEDURE CountMaksKolicine (
+	@p_name NVARCHAR(50) = NULL,
+	@Color NVARCHAR(15) = NULL,
+	@ps_name NVARCHAR(50) = NULL,
+	@count_AverageLeadTime INT = NULL
+)
+AS
+BEGIN
+	SELECT P.Name [ImeProizvoda], P.Color [BojaProizvoda], PS.Name [ImePodkategorije], COUNT(PV.AverageLeadTime) [Brojac]
+	FROM Production.Product P INNER JOIN Production.ProductSubcategory PS
+	ON PS.ProductSubcategoryID = P.ProductSubcategoryID
+	INNER JOIN Purchasing.ProductVendor PV
+	ON PV.ProductID = P.ProductID
+	WHERE @p_name = P.Name OR @Color = P.Color OR PS.Name = @ps_name OR PV.AverageLeadTime >= 0
+	GROUP BY P.Name, P.Color, PS.Name
+	HAVING @count_AverageLeadTime = COUNT(PV.AverageLeadTime)
+END
+
+EXEC CountMaksKolicine @count_AverageLeadTime = 1
+
+EXEC CountMaksKolicine @count_AverageLeadTime = 2
+
+/*ZADATAK
+Kreirati proceduru nad tabelama HumanResources.Employee i Person.Person kojom će se 
+definirati sljedeći ulazni parametri: EmployeeID, FirstName, LastName, Gender. 
+Proceduru kreirati tako da je prilikom izvršavanja moguće unijeti bilo koji broj parametara 
+(možemo ostaviti bilo koje polje bez unijetog parametra), 
+te da procedura daje rezultat ako je zadovoljena bilo koja od vrijednosti 
+koje su navedene kao vrijednosti parametara.
+Nakon kreiranja pokrenuti proceduru za sljedeće vrijednosti parametara:
+1. EmployeeID = 20, 
+2. LastName = Miller
+3. LastName = Abercrombie, Gender = M  */
+
+CREATE PROCEDURE HumanResources.proc_Employee(
+	@EmployeeID INT = NULL,
+	@FirstName NVARCHAR(50) = NULL,
+	@LastName NVARCHAR(50) = NULL,
+	@Gender NCHAR(1) = NULL
+)
+AS
+BEGIN
+	SELECT E.BusinessEntityID, P.FirstName, P.LastName, E.Gender
+	FROM HumanResources.Employee E INNER JOIN Person.Person P
+	ON P.BusinessEntityID = E.BusinessEntityID
+	WHERE @EmployeeID = E.BusinessEntityID OR
+		@FirstName = P.FirstName OR @LastName = P.LastName OR @Gender = E.Gender
+END
+
+EXEC HumanResources.proc_Employee @EmployeeID = 20
+
+EXEC HumanResources.proc_Employee @LastName='Miller'
+
+EXEC HumanResources.proc_Employee @LastName='Abercrombie', @Gender = 'M'
+
+
+/*ZADATAK
+Kreirati proceduru Porudzba nad tabelama Customers, Products, Order Details i Order baze 
+Northwind kojom će se definirati sljedeći ulazni parametri: 
+ContactName, ProductName, UnitPrice, Quantity i Discount. 
+Proceduru kreirati tako da je prilikom izvršavanja moguće unijeti bilo koji 
+broj parametara (možemo ostaviti bilo koje polje bez unijetog parametra), 
+te da procedura daje rezultat ako je zadovoljena bilo koja od vrijednosti 
+koje su navedene kao vrijednosti parametara.
+Nakon kreiranja pokrenuti proceduru za sljedeće vrijednosti parametara:
+1. ContactName = Mario Pontes
+2. OrderID = 10253
+3. Quantity = 10	ili Discount = 0.15
+4. UnitPrice = 20*/
+
+USE NORTHWND 
+GO
+CREATE PROCEDURE Porudzba (
+	@ContactName NVARCHAR(30) = NULL,
+	@ProductName NVARCHAR(30) = NULL,
+	@UnitPrice MONEY = NULL,
+	@Quantity SMALLINT = NULL,
+	@Discount REAL = NULL
+)
+AS
+BEGIN
+	SELECT *
+	FROM Customers C INNER JOIN Orders O
+	ON C.CustomerID = O.CustomerID
+	INNER JOIN [Order Details] OD
+	ON O.OrderID = OD.OrderID
+	INNER JOIN Products P
+	ON OD.ProductID = P.ProductID
+	WHERE C.ContactName = @ContactName OR
+		P.ProductName = @ProductName OR
+		OD.UnitPrice = @UnitPrice OR
+		OD.Quantity = @Quantity OR
+		OD.Discount = @Discount
+END
+
+EXEC Porudzba @ContactName = 'Mario Pontes' 
+
+EXEC Porudzba @Quantity = 10, @Discount = 0.15
+
+EXEC Porudzba @UnitPrice = 20
+
+
+/*ZADATAK
+Kreirati bazu TEST, a zatim u njoj kreirati DDL okidač (trigger) 
+koji će onemogućavati izmjenu i brisanje podataka.*/
+
+CREATE DATABASE TEST2
+
+USE TEST2
+GO
+
+CREATE TRIGGER preventiva
+ON DATABASE
+FOR DROP_TABLE, ALTER_TABLE
+AS
+	PRINT 'Brisanje i izmjene nad podacima nisu moguce'
+	ROLLBACK;
+
+/* U bazi test kreirati tabelu Test sa poljem TestID, a zatim provjeriti rad okidača:
+1. pokušajem brisanja tabele
+2. pokušajem dodavanje novog polja (kolone) .*/
+
+
+CREATE TABLE Test (
+	TestID INT
+) 
+DROP TABLE Test
+
+ALTER TABLE Test
+ADD Kolona2 INT
+
+/*ZADATAK
+U bazi TEST kreirati tabele Kupci i KupciAudit. 
+
+Tabela Kupci će imati sljedeća polja: 
+	KupacID - brojčani tip, primarni ključ, automatsko generiranje sa inkrementom 1, početna vrijednost 1
+	Ime - znakovni tip dužine 50
+	Prezime - znakovni tip dužine 50
+	Adresa - znakovni tip dužine 100
+
+Tabela KupciAudit će imati sljedeća polja: 
+	AuditID - brojčani tip, primarni ključ, automatsko generiranje sa inkrementom 1, početna vrijednost 1
+	KupacID	- brojčani tip
+	Ime - znakovni tip dužine 50
+	Prezime	- znakovni tip dužine 50
+	Adresa - znakovni tip dužine 100
+	Komanda - znakovni tip dužine 10
+	Korisnik - znakovni tip dužine 50
+	Datum - datumski tip (datum, vrijeme)*/
+
+
+CREATE TABLE Kupci(
+	KupacID INT PRIMARY KEY IDENTITY (1,1),
+	Ime NVARCHAR(50),
+	Prezime NVARCHAR(50),
+	Adresa NVARCHAR(100)
+)
+
+CREATE TABLE KupciAudit(
+	AuditID INT PRIMARY KEY IDENTITY (1,1),
+	KupacID INT,
+	Ime NVARCHAR(50),
+	Prezime NVARCHAR(50),
+	Adresa NVARCHAR(100),
+	Komanda NVARCHAR(10),
+	Korisnik NVARCHAR(50),
+	Datum DATETIME
+)
+
+/*ZADATAK
+U tabeli Kupci baze TEST2 kreirati okidač kojim se omogućuje praćenje unosa 
+(istovremeni unos) podataka u tabelu KupciAudit prilikom unosa podataka u tabelu Kupci.
+Nakon kreiranje izvršiti unos podataka u tabelu Kupci.*/
+
+CREATE TRIGGER pracenje
+ON Kupci AFTER INSERT AS
+	INSERT INTO KupciAudit (KupacID, Ime, Prezime, Adresa, Komanda, Korisnik, Datum)
+	SELECT i.KupacID,
+	i.Ime,
+	i.Prezime,
+	i.Adresa,
+	'INSERT',
+	SYSTEM_USER,
+	GETDATE()
+FROM inserted i
+
+/*Okidac_PracenjePromjena
+Kreirati sljedeće tabele:
+1. Proizvod koja će se sastojati od polja:
+ProizvodID, primarni ključ, automatsko punjenje 
+NazivProizvoda, znakovni tip dužine 255, obavezan unos
+Cijena, cjelobrojni tip, obavezan unos
+2. PracenjePromjenaProizvoda koja će sastojati od polja:
+PromjenaID, primarni ključ, automatsko punjenje 
+ProizvodID, cjelobrojni tip, obavezan unos
+NazivProizvoda, znakovni tip dužine 255, obavezan unos 
+Cijena, cjelobrojni tip, obavezan unos 
+DatumPromjene, automatski generiran datum
+Operacija, znakovni tip dužine 3 sa ograničenjem jednu od dvije vrijednosti INS ili DEL
+
+Nakon kreiranja tabela kreirati okidač nad tabelom Proizvod kojim će se pratiti
+promjena stanja u navedenoj tabeli. Okidač se treba obezbijediti praćenje
+i insertovanja i brisanja podataka u (iz) tabele. 
+
+Nakon kreiranja okidača:
+unijeti 3 zapisa u tabelu Proizvod
+izbrisati 1 zapis iz tabele Proizvod (za uslov uzeti bilo koji ProizvodID)*/
+
+--Proizvod
+CREATE TABLE Proizvod(
+    ProizvodID INT IDENTITY(1,1) PRIMARY KEY,
+    NazivProizvoda VARCHAR(255) NOT NULL,
+    Cijena INT NOT NULL
+)
+
+--PracenjePromjenaProizvoda
+CREATE TABLE PracenjePromjenaProizvoda
+(
+    PromjenaID INT IDENTITY(1,1) PRIMARY KEY,
+    ProizvodID INT NOT NULL,
+    NazivProizvoda VARCHAR(255) NOT NULL,
+    Cijena INT NOT NULL,
+    DatumPromjene DATETIME NOT NULL,
+    Operacija CHAR(3) NOT NULL CHECK(Operacija = 'INS' OR Operacija = 'DEL')
+)
+
+CREATE TRIGGER Okidac_PracenjePromjena 
+ON Proizvod 
+AFTER INSERT, DELETE
+AS
+	INSERT INTO PracenjePromjenaProizvoda( ProizvodID, NazivProizvoda, 
+			Cijena, DatumPromjene, Operacija)
+    SELECT
+        i.ProizvodID,
+		NazivProizvoda,
+		i.Cijena,
+        GETDATE(),
+        'INS'
+    FROM
+        inserted i
+	UNION ALL
+	SELECT
+        d.ProizvodID,
+		NazivProizvoda,
+		d.Cijena,
+        GETDATE(),
+		'DEL'
+    FROM deleted d;
+
+	--insert podataka
+INSERT INTO Proizvod
+VALUES 	('Test proizvod1', 10000),
+					('Test proizvod2', 11000)
+
+--pregled sadrzaja tabela PracenjePromjenaProizvoda
+SELECT * FROM Proizvod 
+SELECT * FROM PracenjePromjenaProizvoda
+
+--brisanje podataka
+DELETE FROM Proizvod 
+WHERE ProizvodID = 2;
+
+--pregled sadrzaja tabela
+SELECT * FROM Proizvod 
+SELECT * FROM PracenjePromjenaProizvoda
