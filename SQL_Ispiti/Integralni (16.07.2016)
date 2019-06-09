@@ -1,0 +1,301 @@
+/*1. Kroz SQL kod, napraviti bazu podataka koja nosi ime vašeg broja dosijea. 
+U postupku kreiranja u obzir uzeti samo DEFAULT postavke.
+Unutar svoje baze podataka kreirati tabelu sa sljedećom strukturom:
+a) Proizvodi:
+I. ProizvodID, automatski generatpr vrijednosti i primarni ključ
+II. Sifra, polje za unos 10 UNICODE karaktera (obavezan unos), jedinstvena vrijednost
+III. Naziv, polje za unos 50 UNICODE karaktera (obavezan unos)
+IV. Cijena, polje za unos decimalnog broja (obavezan unos)
+b) Skladista
+I. SkladisteID, automatski generator vrijednosti i primarni ključ
+II. Naziv, polje za unos 50 UNICODE karaktera (obavezan unos)
+III. Oznaka, polje za unos 10 UNICODE karaktera (obavezan unos), jedinstvena vrijednost
+IV. Lokacija, polje za unos 50 UNICODE karaktera (obavezan unos)
+c) SkladisteProizvodi
+I) Stanje, polje za unos decimalnih brojeva (obavezan unos)
+Napomena: Na jednom skladištu može biti uskladišteno više proizvoda, dok isti proizvod može biti
+uskladišten na više različitih skladišta. 
+Onemogućiti da se isti proizvod na skladištu može pojaviti više puta.
+10 bodova*/
+
+CREATE DATABASE BrojIndeksa
+GO
+
+USE BrojIndeksa
+GO
+
+/*1a)*/
+CREATE TABLE Proizvodi(
+	ProizvodID INT CONSTRAINT PK_Proizvodi PRIMARY KEY(ProizvodID) IDENTITY(1,1),
+	Sifra NVARCHAR(10) NOT NULL CONSTRAINT UQ_Sifra UNIQUE, 
+	Naziv NVARCHAR(50) NOT NULL,
+	Cijena DECIMAL(18, 2) NOT NULL
+)
+/*1b)*/
+CREATE TABLE Skladista(
+	SkladisteID INT CONSTRAINT PK_Skladiste PRIMARY KEY(SkladisteID) IDENTITY(1,1),
+	Naziv NVARCHAR(50) NOT NULL,
+	Oznaka NVARCHAR(10) NOT NULL CONSTRAINT UQ_Oznaka UNIQUE, 
+	Lokacija NVARCHAR(50) NOT NULL
+)
+/*1c)*/
+CREATE TABLE SkladisteProizvodi(
+	ProizvodID INT NOT NULL,
+	SkladisteID INT NOT NULL,
+	CONSTRAINT PK_SkladisteProizvodi PRIMARY KEY(ProizvodID, SkladisteID),
+	CONSTRAINT FK_SkladisteProizvodi_Skladiste FOREIGN KEY(SkladisteID)
+	REFERENCES Skladista (SkladisteID),
+	CONSTRAINT FK_SkladisteProizvodi_Proizvodi FOREIGN KEY(ProizvodID)
+	REFERENCES Proizvodi (ProizvodID),
+	Stanje DECIMAL(18,2) NOT NULL
+)
+
+/*2. Popunjavanje tabela podacima
+a) Putem INSERT komande u tabelu Skladista dodati minimalno 3 skladišta.
+b) Koristeći bazu podataka AdventureWorks2014, preko INSERT i SELECT komande importovati
+10 najprodavanijih bicikala (kategorija proizvoda 'Bikes' i to sljedeće kolone:
+I. Broj proizvoda (ProductNumber) - > Sifra,
+II. Naziv bicikla (Name) -> Naziv,
+III. Cijena po komadu (ListPrice) -> Cijena,
+c) Putem INSERT i SELECT komandi u tabelu SkladisteProizvodi za sva dodana skladista
+importovati sve proizvode tako da stanje bude 100
+10 bodova*/
+
+/*2a)*/
+INSERT INTO Skladista (Naziv, Oznaka, Lokacija)
+VALUES ('Skladiste1', 'SKL1', 'Zenica')
+
+INSERT INTO Skladista (Naziv, Oznaka, Lokacija)
+VALUES ('Skladiste2', 'SKL2', 'Mostar')
+
+INSERT INTO Skladista (Naziv, Oznaka, Lokacija)
+VALUES ('Skladiste3', 'SKL3', 'Sarajevo')
+
+/*2b)*/
+USE AdventureWorks2014 
+GO
+
+INSERT INTO BrojIndeksa.dbo.Proizvodi(Sifra, Naziv, Cijena)
+SELECT TOP 10 P.ProductNumber, P.Name, P.ListPrice
+FROM Production.Product AS P 
+	INNER JOIN Production.ProductSubcategory AS PSC
+		ON PSC.ProductSubcategoryID = P.ProductSubcategoryID
+	INNER JOIN Production.ProductCategory AS PC
+		ON PC.ProductCategoryID = PSC.ProductCategoryID
+	INNER JOIN Sales.SalesOrderDetail AS SOD 
+		ON SOD.ProductID = P.ProductID
+WHERE PC.ProductCategoryID = 1
+GROUP BY P.ProductNumber, P.Name, P.ListPrice
+ORDER BY SUM(SOD.OrderQty) DESC
+
+
+/*2c)*/
+
+INSERT INTO BrojIndeksa.dbo.Proizvodi(Sifra, Naziv, Cijena)
+SELECT TOP 100 P.ProductNumber, P.Name, P.ListPrice
+FROM Production.Product P
+
+USE BrojIndeksa
+GO
+
+INSERT INTO SkladisteProizvodi(ProizvodID, SkladisteID, Stanje)
+SELECT TOP 100 ProizvodID, 1, 100
+FROM Proizvodi
+
+INSERT INTO SkladisteProizvodi(ProizvodID, SkladisteID, Stanje)
+SELECT TOP 100 ProizvodID, 2, 100
+FROM Proizvodi
+
+INSERT INTO SkladisteProizvodi(ProizvodID, SkladisteID, Stanje)
+SELECT TOP 100 ProizvodID, 3, 100
+FROM Proizvodi
+
+/*3. Kreirati uskladištenu proceduru koja će vršiti povećanje stanja skladišta 
+za određeni proizvod na odabranom skladištu. Provjeriti ispravnost procedure
+10 bodova*/
+USE BrojIndeksa
+GO
+
+
+CREATE PROCEDURE proc_PovecajStanje (
+	@proizvodID INT ,
+	@skladisteID INT
+)
+AS 
+	BEGIN
+		UPDATE SkladisteProizvodi
+		SET Stanje = Stanje + 1
+		WHERE ProizvodID = @proizvodID AND SkladisteID = @skladisteID
+	END
+
+EXEC proc_PovecajStanje @proizvodID = 1, @skladisteID = 3 
+
+SELECT * FROM SkladisteProizvodi
+
+/*4. Kreiranje indeksa u bazi podataka nad tabelama
+a) Non-clustered indeks nad tabelom Proizvodi. Potrebno je indeksirati Sifru i Naziv. Također,
+potrebno je uključiti kolonu Cijena
+b) Napisati proizvoljni upit nad tabelom Proizvodi koji u potpunosti iskorištava indeks iz
+prethodnog koraka
+c) Uradite disable indeksa iz koraka a)
+5 bodova*/
+
+/*4a)*/
+
+CREATE NONCLUSTERED INDEX IX_Proizvodi
+ON Proizvodi (Sifra, Naziv)
+INCLUDE (Cijena)
+
+/*4b)*/
+
+SELECT *
+FROM Proizvodi
+
+/*4c)*/
+ALTER INDEX IX_Proizvodi ON Proizvodi DISABLE
+
+/*5. Kreirati view sa sljedećom definicijom. 
+Objekat treba da prikazuje sifru, naziv i cijenu proizvoda,
+oznaku, naziv i lokaciju skladišta, te stanje na skladištu.
+10 bodova*/
+
+CREATE VIEW vPregled 
+AS
+	SELECT P.Naziv [NazivProizvoda], P.Cijena, P.Sifra, 
+			S.Lokacija, S.Naziv [NazivSkladista], S.Oznaka, 
+			SP.Stanje
+	FROM Proizvodi P INNER JOIN SkladisteProizvodi SP
+		ON P.ProizvodID = SP.ProizvodID
+	INNER JOIN Skladista S
+		ON SP.SkladisteID = S.SkladisteID
+
+SELECT * FROM vPregled
+
+/*6. Kreirati uskladištenu proceduru koja će na osnovu unesene šifre proizvoda 
+prikazati ukupno stanje zaliha na svim skladištima. 
+U rezultatu prikazati sifru, naziv i cijenu proizvoda te ukupno stanje zaliha.
+U proceduri koristiti prethodno kreirani view. Provjeriti ispravnost kreirane procedure.
+10 bodova */
+
+CREATE PROCEDURE proc_PrikaziZalihe(
+	@sifraProzivoda NVARCHAR(10)
+)
+AS
+	BEGIN
+		SELECT P.Sifra, P.NazivProizvoda, P.Cijena, SUM(Stanje) [Stanje]
+		FROM vPregled P
+		WHERE P.Sifra = @sifraProzivoda
+		GROUP BY P.Sifra, P.NazivProizvoda, P.Cijena
+	END
+
+EXEC proc_PrikaziZalihe 'BK-M68B-38'
+
+/*7. Kreirati uskladištenu proceduru koja će vršiti upis novih proizvoda, 
+te kao stanje zaliha za uneseni proizvod postaviti na 0 za sva skladišta. 
+Provjeriti ispravnost kreirane procedure.
+10 bodova*/
+
+CREATE PROCEDURE proc_UpisProizvoda(
+	@sifra NVARCHAR(10),
+	@nazivProizvoda NVARCHAR(50),
+	@Cijena DECIMAL(18, 2)
+)
+AS
+	BEGIN
+		INSERT INTO Proizvodi(Sifra, Naziv, Cijena)
+		VALUES(@sifra, @nazivProizvoda, @Cijena)
+
+		INSERT INTO SkladisteProizvodi(SkladisteID, ProizvodID, Stanje)
+		SELECT 1, ProizvodID, 0
+		FROM Proizvodi
+		WHERE @sifra = Sifra
+
+		INSERT INTO SkladisteProizvodi(SkladisteID, ProizvodID, Stanje)
+		SELECT 2, ProizvodID, 0
+		FROM Proizvodi
+		WHERE @sifra = Sifra
+
+		INSERT INTO SkladisteProizvodi(SkladisteID, ProizvodID, Stanje)
+		SELECT 3, ProizvodID, 0
+		FROM Proizvodi
+		WHERE @sifra = Sifra
+	END
+
+EXEC proc_UpisProizvoda 'Moj1', 'MojProizvod', 17
+
+SELECT * FROM Proizvodi
+SELECT * FROM SkladisteProizvodi
+
+/*8. Kreirati uskladištenu proceduru koja će za unesenu šifru proizvoda vršiti brisanje proizvoda
+uključujući stanje na svim skladištima. Provjeriti ispravnost procedure.
+10 bodova
+*/
+	
+ALTER PROCEDURE proc_Brisanje(
+	@sifraProizvoda NVARCHAR(10)
+)
+AS
+	BEGIN
+		DELETE FROM SkladisteProizvodi
+		WHERE ProizvodID = (SELECT ProizvodID
+								FROM Proizvodi
+								WHERE Sifra = @sifraProizvoda)
+		DELETE FROM Proizvodi
+		WHERE Sifra = @sifraProizvoda
+	END
+
+EXEC proc_Brisanje 'Moj1'
+
+SELECT * FROM Proizvodi
+SELECT * FROM SkladisteProizvodi
+
+/*9. Kreirati uskladištenu proceduru koja će za unesenu šifru proizvoda, oznaku skladišta
+ili lokaciju skladišta vršiti pretragu prethodno kreiranim view-om (zadatak 5).
+Procedura obavezno treba da vraća rezultate bez obrzira da li su vrijednosti 
+parametara postavljene. 
+Testirati ispravnost procedure u sljedećim situacijama:
+a) Nije postavljena vrijednost niti jednom parametru (vraća sve zapise)
+b) Postavljena je vrijednost parametra šifra proizvoda, a ostala dva parametra nisu
+c) Postavljene su vrijednosti parametra šifra proizvoda i oznaka skladišta, a lokacija
+nije
+d) Postavljene su vrijednosti parametara šifre proizvoda i lokacije, a oznaka skladišta
+nije
+e) Postavljene su vrijednosti sva tri parametra
+20 bodova*/
+
+CREATE PROCEDURE proc_Pretraga(
+	@sifra NVARCHAR(10) = NULL,
+	@oznaka NVARCHAR(10) = NULL,
+	@lokacija NVARCHAR(50) = NULL
+)
+AS
+	BEGIN
+		SELECT *
+		FROM vPregled VP
+		WHERE (@sifra = VP.Sifra OR @oznaka = VP.Oznaka 
+			OR @lokacija = VP.Lokacija) OR 
+			(@sifra IS NULL
+			 AND @oznaka IS NULL 
+			 AND @lokacija IS NULL)
+	END
+
+/*a)*/
+EXEC proc_Pretraga
+/*b)*/
+EXEC proc_Pretraga @sifra = 'BK-M68B-38'
+/*c)*/
+EXEC proc_Pretraga @sifra = 'BK-M68B-38', @oznaka = 'SKL1'
+/*d)*/
+EXEC proc_Pretraga @sifra = 'BK-M68B-38', @lokacija = 'Zenica'
+/*e)*/
+EXEC proc_Pretraga @sifra = 'BK-M68B-38', @oznaka = 'SKL1', @lokacija = 'Zenica'
+
+/*10. Napraviti full i diferencijalni backup baze podataka na default lokaciju servera:
+C:\Program Files\Microsoft SQL Server\MSSQL12.MSSQLSERVER\MSSQL\Backup*/
+
+BACKUP DATABASE BrojIndeksa
+TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\BrojIndeksa.bak'
+
+BACKUP DATABASE BrojIndeksa
+TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL14.MSSQLSERVER\MSSQL\Backup\BrojIndeksa.bak'
+WITH DIFFERENTIAL 
