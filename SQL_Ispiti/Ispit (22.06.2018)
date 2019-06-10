@@ -1,0 +1,257 @@
+/*1.Koristeći SQL kod kreirati bazu podataka (defaultne postavke) sa imenom Vašeg broja dosijea,
+ a zatim u svojoj bazi podataka kreirati sljedeće tabele: 
+
+a.	Otkupljivaci
+i.	Ime, polje za unos 50 karaktera (obavezan unos)
+ii.	Prezime, polje za unos 50 karaktera (obavezan unos)
+iii. DatumRodjenja,  polje za unos datuma (obavezan unos, 
+	početno  postaviti na trenutni sistemski datum)
+iv.	JMBG, polje za unos 13 karaktera (obavezan unos)
+v.	Spol, polje za unos 1 karaktera (obavezan unos)
+vi.	Grad, polje za unos 50 karaktera (obavezan unos)
+vii. Adresa, polje za unos 100 karaktera (obavezan unos)
+viii. Email, polje za unos 100 karaktera (obavezan unos, jedinstvena vrijednost)
+ix.	Aktivan, polje za unos tačno/netačno (obavezan unos, početno postaviti na aktivan)
+
+b.	Proizvodi
+i.	Naziv, polje za unos 50 karaktera (obavezan unos)
+ii.	Sorta, polje za unos 50 karaktera (obavezan unos)
+iii.	OtkupnaCijena, polje za unos decimalnog broja (obavezan unos)
+iv.	Opis, polje za unos velike količine teksta
+
+c.	OtkupProizvoda
+i.	Datum, polje za unos datuma (obavezan unos, početno postaviti na trenutni sistemski datum)
+ii.	Kolicina, polje za unos decimalnog broja (obavezan unos)
+iii.	BrojGajbica, polje za unos cijelog broja (obavezan unos)
+
+Napomena: Otkupljivač ima mogućnost da otkupljuje više proizvoda, 
+a svakako da jedan proizvod može otkupljivati više otkupljivača, 
+s tim da otkupljivač ne može dva puta da otkupljuje isti proizvod u toku jednog dana.
+Spojna tabela je OtkupProizvoda.
+15 bodova
+*/
+
+
+CREATE DATABASE BrojIndeksa
+GO
+
+USE BrojIndeksa
+GO
+
+CREATE TABLE Otkupljivaci(
+	OtkupljivacID INT NOT NULL CONSTRAINT PK_Otkupljivaci PRIMARY KEY(OtkupljivacID) IDENTITY(1,1),
+	Ime NVARCHAR(50) NOT NULL,
+	Prezime NVARCHAR(50) NOT NULL,
+	DatumRodjenja DATE NOT NULL DEFAULT CONVERT(DATE, SYSDATETIME()),
+	JMBG NVARCHAR(13) NOT NULL CONSTRAINT CHK_JMBG CHECK(LEN(JMBG)=13),
+	Spol NCHAR(1) NOT NULL,
+	Grad NVARCHAR(50) NOT NULL,
+	Adresa NVARCHAR(100) NOT NULL,
+	Email NVARCHAR(100) NOT NULL CONSTRAINT UQ_Email UNIQUE,
+	Aktivan BIT DEFAULT 1 
+)
+
+CREATE TABLE Proizvodi(
+	ProizvodID INT NOT NULL CONSTRAINT PK_Proizvodi PRIMARY KEY(ProizvodID) IDENTITY(1,1),
+	Naziv NVARCHAR(50) NOT NULL,
+	Sorta NVARCHAR(50) NOT NULL,
+	OtkupnaCijena DECIMAL(18, 2) NOT NULL,
+	Opis NTEXT
+)
+
+CREATE TABLE OtkupProizvoda(
+	ProizvodID INT NOT NULL,
+	OtkupljivacID INT NOT NULL,
+	Datum DATE NOT NULL DEFAULT CONVERT(DATE, SYSDATETIME()),
+	CONSTRAINT PK_OtkupProizvoda PRIMARY KEY(ProizvodID, OtkupljivacID, Datum),
+	CONSTRAINT FK_OtkupProizvoda_Proizvodi FOREIGN KEY(ProizvodID) 
+	REFERENCES Proizvodi(ProizvodID),
+	CONSTRAINT FK_OtkupProizvoda_Otkupljivaci FOREIGN KEY(OtkupljivacID) 
+	REFERENCES Otkupljivaci(OtkupljivacID),
+	Kolicina DECIMAL(18, 2) NOT NULL,
+	BrojGajbica INT NOT NULL
+)
+
+/*2.	Iz baze podataka Northwind prebaciti sljedeće podatke u svoju bazu:
+
+Napomena: Zadržati identifikatore zapisa!!!
+
+a.	U tabelu Otkupljivaci prebaciti 5 najmlađih zaposlenika iz baze Northwind na sljedeći način:
+i.	Ime -> Employees.FirstName
+ii.	Prezime -> Employees.LastName
+iii. DatumRodjenja -> Employees.BirthDate
+iv.	JMBG -> Obrnuti godinu rođenja, na to dodati dan rođenja, zatim dodati mjesec rođenja,
+ te na kraju dodati zadnje 4 cifre od polja HomePhone, 
+ (nije obavezno voditi računa o jednocifrenim/dvocifrenim brojevima, 
+ npr. ako je mjesec/dan u datumu 02, u JMBG može biti 2)
+v.	Spol  -> Odrediti na osnovu polja Employees.TitleOfCourtesy
+vi.	Grad -> Employees.City
+vii.	Adresa -> Employees.Address -> zamjenuti svaki razmak sa ''_'' (donjom crtom)
+viii.	Email -> email treba biti u sljedećem formatu: ime_prezime@edu.fit.ba
+ix.	Aktivan -> za sve otkupljivače postaviti da su aktivni
+b.	U tabelu Proizvodi prebaciti sve proizvode iz baze Northwind na sljedeći način: 
+i.	Naziv -> Products.ProductName
+ii.	Sorta -> Categories.CategoryName
+iii.	OtkupnaCijena -> Products.UnitPrice
+iv.	Opis -> Categories.Description
+c.	U tabelu OtkupiProizvoda prebaciti sve detalje narudžbi (Order Details) iz baze Northwind koje su obavili prethodno prebačeni zaposlenici (Employees) , na sljedeći način:
+i.	Datum -> Orders.OrderDate
+ii.	Kolicina -> Order Details.Quantity  uvećano 8 puta
+iii.	BrojGajbica -> Order Details.Quantity)
+*a) rezultat: 5 zapisa
+*b) rezultat: 77 zapisa
+*c) rezultat: 1032 zapisa
+20 bodova
+*/
+
+/*a)*/
+
+SET IDENTITY_INSERT Otkupljivaci ON
+
+INSERT INTO Otkupljivaci(OtkupljivacID, Ime, Prezime, DatumRodjenja, JMBG, Spol, Grad, Adresa, Email)
+SELECT TOP 5 E.EmployeeID, E.FirstName, E.LastName, E.BirthDate,
+	IIF(LEN(CONCAT(REVERSE(YEAR(E.BirthDate)), DAY(E.BirthDate), MONTH(E.BirthDate), RIGHT(E.HomePhone, 4))) = 13, 
+		CONCAT(REVERSE(YEAR(E.BirthDate)), DAY(E.BirthDate), MONTH(E.BirthDate), RIGHT(E.HomePhone, 4)),
+		CONCAT(REVERSE(YEAR(E.BirthDate)), DAY(E.BirthDate), MONTH(E.BirthDate), RIGHT(E.HomePhone, 4), 
+		REPLICATE('0', 13 - LEN(CONCAT(REVERSE(YEAR(E.BirthDate)), DAY(E.BirthDate), MONTH(E.BirthDate), RIGHT(E.HomePhone, 4)))))),
+	IIF(E.TitleOfCourtesy = 'Ms.' or E.TitleOfCourtesy = 'Mrs.', 'Z', 'M'),
+	E.City, REPLACE(E.Address, ' ', '_'),
+	LOWER(CONCAT(E.FirstName, '_', E.LastName , '@edu.fit.ba'))
+FROM NORTHWND.dbo.Employees E
+ORDER BY YEAR(E.BirthDate) DESC
+
+SELECT * FROM Otkupljivaci
+
+SET IDENTITY_INSERT Otkupljivaci OFF
+
+/*b)*/
+
+INSERT INTO Proizvodi(Naziv, Sorta, OtkupnaCijena, Opis)
+SELECT P.ProductName, C.CategoryName, P.UnitPrice, C.Description
+FROM NORTHWND.dbo.Products P
+	INNER JOIN NORTHWND.dbo.Categories C
+	ON P.CategoryID = C.CategoryID
+
+/*c.*/
+
+INSERT INTO OtkupProizvoda(ProizvodID, OtkupljivacID, Datum, Kolicina, BrojGajbica)
+SELECT OD.ProductID, O.EmployeeID, O.OrderDate, SUM(OD.Quantity * 8), SUM(OD.Quantity)
+FROM NORTHWND.dbo.Orders O
+	INNER JOIN NORTHWND.dbo.[Order Details] OD
+		ON O.OrderID = OD.OrderID
+	INNER JOIN Otkupljivaci OT
+		ON OT.OtkupljivacID = O.EmployeeID
+GROUP BY OD.ProductID, O.EmployeeID, O.OrderDate
+
+SELECT * FROM OtkupProizvoda
+
+/*3.	Izmjena strukture baze
+a.	U tabeli Otkupljivaci modifikovati kolonu Adresa tako da nakon modifikacije
+NULL vrijednost pripada domeni kolone Adresa. 
+b.	Tabeli Proizvodi dodati kolonu TipProizvoda (polje za unos 50 karaktera), 
+te odmah nakon toga, svakom proizvodu čiji ID je paran broj za vrijednost 
+polja TipProizvoda postaviti vrijednost: “Voće”, a neparnima postaviti/ostaviti NULL.
+10 bodova*/
+
+/*3a)*/
+ALTER TABLE Otkupljivaci ALTER COLUMN Adresa NVARCHAR(50) NULL
+/*3b)*/
+ALTER TABLE Proizvodi
+ADD TipProizvoda NVARCHAR(50)
+
+UPDATE Proizvodi
+SET TipProizvoda = IIF(ProizvodID % 2 = 0, 'Voce', NULL)
+
+/*4. Svim otkupljivačima koji nisu iz London i rođeni su 1960-e godine ili 
+poslije izmjenuti status aktivnosti na neaktivan.
+*izmjena 1 zapisa
+5 bodova*/
+
+UPDATE Otkupljivaci
+SET Aktivan = 0
+WHERE Grad <> 'London' AND YEAR(DatumRodjenja) >= 1960
+
+
+/*5. Svim proizvodima čiji naziv sorte sadrži znak “/” (slash) uvećati otkupnu cijenu za 5.45.
+*izmjena 13 zapisa
+5 bodova*/
+
+UPDATE Proizvodi
+SET OtkupnaCijena = OtkupnaCijena + 5.45
+WHERE CHARINDEX('/', Sorta) <> 0
+
+/*6. Napisati upit koji prikazuje sve otkupljivače, ukupnu količinu koju su otkupili 
+za svaki otkupljeni proizvod, te broj gajbica koji su pri tome uzeli
+*rezultat upita 321 zapis
+10 bodova*/
+
+SELECT O.Ime + ' ' + O.Prezime [Ime i prezime], P.Naziv, SUM(OP.Kolicina), SUM(OP.BrojGajbica) [BrojGajbica]
+FROM Otkupljivaci O
+INNER JOIN OtkupProizvoda OP
+	ON O.OtkupljivacID = OP.OtkupljivacID
+INNER JOIN Proizvodi P
+	ON OP.ProizvodID = P.ProizvodID
+GROUP BY O.Ime + ' ' + O.Prezime, P.Naziv
+ORDER BY P.Naziv, SUM(OP.Kolicina) DESC
+
+/*7. Prikazati 10 proizvoda koji su ostvarili najveću zaradu od prodaje (otkupnine) 
+u vremenskom period od 24.12.1996. do 16.08.1997., 
+pored zarade prikazati i otkupljenu količinu:
+a.	Prikazati samo proizvode kojih je otkupljeno količinski 1000 ili više.
+b.	Zaradu i količinu zaokružiti na dvije decimale
+c.	Zaradu prikazati u formatu: “450.00 KM”, a količinu u formatu “348.45 kg” 
+*rezultat upita 10 zapisa
+15 bodova*/
+
+/*7a)*/
+SELECT TOP 10 P.Naziv, CONCAT(ROUND(SUM(OP.Kolicina), 2), ' kg') [Kolicina], CONCAT(CONVERT(DECIMAL(18, 2), SUM(OP.Kolicina * P.OtkupnaCijena)), ' KM') [UkupnaCijena]
+FROM Proizvodi P
+INNER JOIN OtkupProizvoda OP
+	ON P.ProizvodID = OP.ProizvodID
+WHERE OP.Datum > '1996-12-24' AND OP.Datum < '1997-08-16'
+GROUP BY P.Naziv
+HAVING SUM(OP.Kolicina) >= 1000
+ORDER BY 3 DESC
+
+/*8. Prikazati sve proizvode, te za svaki proizvod prikazati koliko puta je otkupljivan 
+(ne količina, već broj otkupa). 
+a.	Prikazati sljedeće kolone tabele Proizvodi: Naziv, TipProizvoda, Sorta, BrojOtkupljivanja
+b.	Ukoliko se u TipProizvoda pojavljuje NULL vrijednost, formatirati izlaz tako
+da se umjesto NULL ispiše “Nije definisan”
+*rezultat upita 77 zapisa
+5 bodova*/
+
+SELECT P.Naziv, ISNULL(P.TipProizvoda, 'Nije definisan') [TipProizvoda], 
+		P.Sorta, COUNT(P.ProizvodID) [BrojOtkupljivanja]
+FROM Proizvodi P 
+INNER JOIN OtkupProizvoda OP
+	ON P.ProizvodID = OP.ProizvodID
+GROUP BY P.Naziv, P.TipProizvoda, P.Sorta
+
+/*9. Modifikovati prethodni upit, tako da se prikažu samo proizvodi koje su otkupile 
+aktivne žene otkupljivači, u 8-om mjesecu 1997-e godine.
+*rezultat upita 17 zapisa
+5 bodova*/
+
+
+SELECT P.Naziv, ISNULL(P.TipProizvoda, 'Nije definisan') [TipProizvoda], 
+		P.Sorta, COUNT(P.ProizvodID) [BrojOtkupljivanja]
+FROM Proizvodi P 
+INNER JOIN OtkupProizvoda OP
+	ON P.ProizvodID = OP.ProizvodID
+INNER JOIN Otkupljivaci O
+	ON O.OtkupljivacID = OP.OtkupljivacID
+WHERE O.Aktivan = 1 AND O.Spol = 'Z' AND YEAR(OP.Datum) = 1997 AND MONTH(OP.Datum) = 8
+GROUP BY P.Naziv, P.TipProizvoda, P.Sorta
+
+/*10. Obrisati sve otkupljivače koji dolaze iz Seattle.
+10 bodova*/
+
+DELETE FROM OtkupProizvoda
+FROM OtkupProizvoda OP
+INNER JOIN Otkupljivaci O
+	ON OP.OtkupljivacID = O.OtkupljivacID
+WHERE O.Grad = 'Seattle'
+
+DELETE FROM Otkupljivaci
+WHERE Grad = 'Seattle'
