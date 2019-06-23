@@ -1,0 +1,216 @@
+
+CREATE DATABASE Parcijalni
+GO
+
+USE Parcijalni 
+GO
+
+/*
+2. U svoju baze podataka putem Import/Export alata prebaciti sljedeće tabele sa podacima: 
+CreditCard, PersonCreditCard i Person koje se 
+nalaze u AdventureWorks2014 bazi podataka.
+*/
+
+/*
+3. Kreiranje indeksa u bazi podataka nada tabelama koje ste importovali u zadatku broj 2:
+a) Non-clustered indeks nad tabelom Person. Potrebno je indeksirati Lastname i FirstName. Također,
+potrebno je uključiti kolonu Title.
+b) Napisati proizvoljni upit nad tabelom Person koji u potpunosti
+iskorištava indeks iz prethodnog koraka 
+c) Uraditi disable indeksa iz koraka a)
+d) Clustered indeks nad tabelom CreditCard i kolonom CreditCardID
+e) Non-clustered indeks nad tabelom CreditCard i kolonom CardNumber. 
+Također, potrebno je uključiti
+kolone ExpMonth i ExpYear.*/
+/*a)*/
+
+CREATE NONCLUSTERED INDEX IX_Person 
+ON Person.Person (LastName, FirstName)
+INCLUDE (Title)
+
+/*b)*/
+SELECT LastName, FirstName, Title
+FROM Person.Person
+
+/*c)*/
+ALTER INDEX IX_Person ON Person.Person
+DISABLE
+
+/*d)*/
+CREATE CLUSTERED INDEX IX_CreditCard 
+ON Sales.CreditCard (CreditCardID)
+
+/*e)*/
+CREATE NONCLUSTERED INDEX IX_CreditCard_CN
+ON Sales.CreditCard (CardNumber)
+INCLUDE(ExpMonth, ExpYear)
+
+/*
+4. Kreirati view sa sljedećom definicijom.
+Objekat treba da prikazuje: Prezime, ime, broj kartice i tip kartice, ali
+samo onim osobama koje imaju karticu tipa Vista i nemaju titulu
+*/
+
+CREATE VIEW v_KarticaVista
+AS
+	SELECT P.LastName, P.FirstName, CC.CardNumber, CC.CardType
+	FROM Person.Person P
+	INNER JOIN Sales.PersonCreditCard PCC
+	ON P.BusinessEntityID = PCC.BusinessEntityID
+	INNER JOIN Sales.CreditCard CC
+	ON PCC.CreditCardID = CC.CreditCardID
+	WHERE CC.CardType = 'Vista' AND P.Title IS NULL
+
+SELECT * FROM v_KarticaVista
+
+/*
+5. Kreirati uskladištenu proceduru koja vrši modifikaciju
+prezimena osobe za uneseni BusinessEntityID.
+Nakon toga izvršiti proceduru i jednostavnom SELECT komandom provjeriti rezultat
+*/
+
+CREATE PROCEDURE proc_PromjenaPrezimena(
+	@id INT,
+	@lastName NVARCHAR(50)
+)
+AS
+	BEGIN
+		UPDATE Person.Person
+		SET LastName = @lastName
+		WHERE @id = BusinessEntityID
+	END
+
+SELECT * FROM Person.Person
+WHERE BusinessEntityID = 1
+
+EXEC proc_PromjenaPrezimena 1, 'Selimovic'
+
+SELECT * FROM Person.Person
+WHERE BusinessEntityID = 1
+
+/*
+6. Napraviti full i diferencijalni backup baze podataka na default lokaciju servera:
+C:\Program Files\Microsoft SQL Server\MSSQL12.MSSQLSERVER\MSSQL\Backup
+*/
+
+BACKUP DATABASE Parcijalni
+TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Backup\ParcBak.bak'
+
+
+BACKUP DATABASE Parcijalni
+TO DISK = 'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Backup\ParcBak_Diff.bak'
+WITH DIFFERENTIAL 
+
+/*
+7. Mapirati login sa SQL Server-a pod imenom „student“ u svoju bazu kao 
+korisnika pod svojim imenom
+*/
+
+CREATE LOGIN _student
+WITH PASSWORD = '5@M0_F1T!'
+GO
+
+CREATE USER Adela FOR LOGIN _student
+
+/*
+8. Kreirati uskladištenu proceduru koja će za uneseno prezime, ime ili broj kartice 
+vršiti pretragu nad prethodno kreiranim view-om (zadatak 4). 
+Procedura obavezno treba da vraća rezultate bez obzira da li su vrijednosti
+parametara postavljene. 
+Testirati ispravnost procedure u sljedećim situacijama:
+a) Nije postavljena vrijednost niti jednom parametru (vraća sve zapise)
+b) Postavljena je vrijednost parametra prezime, a ostala dva parametra nisu (pretraga po prezimenu)
+c) Postavljene su vrijednosti parametara prezime i ime, a broj kartice nije 
+(pretraga po prezimenu i imenu)
+d) Postavljene su vrijednosti sva tri parametra (pretraga po svim parametrima)
+Također, procedura treba da pretragu prezimena i imena vrši parcijalno (počinje sa).
+*/
+
+CREATE PROCEDURE proc_Pretraga(
+	@prezime NVARCHAR(50) = NULL,
+	@ime NVARCHAR(50) = NULL,
+	@brojKartice NVARCHAR(25) = NULL
+)
+AS
+	BEGIN
+		SELECT *
+		FROM v_KarticaVista
+		WHERE (@prezime IS NULL 
+				AND @ime IS NULL 
+					AND @brojKartice IS NULL) OR
+				(@prezime = LastName OR LastName LIKE @prezime + '%') OR
+				(@ime = FirstName OR FirstName LIKE @ime + '%') OR
+				(@brojKartice = CardNumber)
+			
+	END
+
+--a) Nije postavljena vrijednost niti jednom parametru (vraća sve zapise)
+ 
+EXEC proc_Pretraga
+GO
+-- b) Postavljena je vrijednost parametra prezime, a ostala dva parametra nisu (pretraga po prezimenu)
+ 
+EXEC proc_Pretraga @prezime = 'Mehta'
+GO
+EXEC proc_Pretraga @prezime = 'Xu'
+GO
+ 
+-- c) Postavljene su vrijednosti parametara prezime i ime, a broj kartice nije (pretraga po prezimenu i imenu)
+ 
+EXEC proc_Pretraga @prezime = 'Xu', @ime = 'Cedric'
+GO
+EXEC proc_Pretraga @prezime = 'Srini', @ime = 'Cesar'
+GO
+ 
+-- d) Postavljene su vrijednosti sva tri parametra (pretraga po svim parametrima)
+ 
+EXEC proc_Pretraga @prezime = 'Miller', @ime = 'Fernando', @brojKartice = '11116489468207'
+GO
+EXEC proc_Pretraga @prezime = 'Rana', @ime = 'Marco', @brojKartice = '11112508182384'
+GO
+ 
+-- Također, procedura treba da pretragu prezimena i imena vrši parcijalno (počinje sa).
+   
+EXEC proc_Pretraga @prezime = 'R', @ime = 'M'
+GO
+EXEC proc_Pretraga @prezime = 'T', @ime = 'S'
+GO
+  
+/*
+9. Kreirati uskladištenu proceduru koje će za uneseni broj kartice vršiti brisanje 
+kreditne kartice (CreditCard).
+Također, u istoj proceduri (u okviru jedne transakcije) 
+prethodno obrisati sve zapise o vlasništvu kartice
+(PersonCreditCard). Obavezno testirati ispravnost kreirane procedure.
+*/
+
+CREATE PROCEDURE proc_Brisanje(
+	@brojKartice NVARCHAR(25)
+)
+AS
+	BEGIN
+		DELETE FROM Sales.PersonCreditCard
+		FROM Sales.PersonCreditCard PCC
+		INNER JOIN Sales.CreditCard CC
+			ON PCC.CreditCardID = CC.CreditCardID
+		WHERE CC.CardNumber = @brojKartice
+
+		DELETE FROM Sales.CreditCard
+		WHERE @brojKartice = CardNumber
+	END
+
+EXEC proc_Brisanje '33332664695310'
+
+/*
+10. Kreirati trigger koji će spriječiti brisanje zapisa u tabeli PersonCreditCard.
+Testirati ispravnost kreiranog triggera
+*/
+CREATE TRIGGER TR_ZabranjenoBrisanje ON Sales.PersonCreditCard
+INSTEAD OF DELETE
+AS
+	BEGIN
+		PRINT('Nije dozvoljeno brisati iz ove tabele')
+		ROLLBACK
+	END
+
+DELETE FROM Sales.PersonCreditCard
