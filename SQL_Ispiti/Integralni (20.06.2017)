@@ -1,7 +1,7 @@
 
 /*
 1.	Kroz SQL kod, napraviti bazu podataka koja nosi ime vašeg broja dosijea. 
-Fajlove baze podataka smjestiti na sljedeće lokacije:
+	Fajlove baze podataka smjestiti na sljedeće lokacije:
 a)	Data fajl: D:\BP2\Data
 b)	Log fajl: D:\BP2\Log				
 5 bodova
