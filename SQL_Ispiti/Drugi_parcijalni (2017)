@@ -7,8 +7,7 @@ GO
 
 /*
 2. U svoju baze podataka putem Import/Export alata prebaciti sljedeće tabele sa podacima: 
-CreditCard, PersonCreditCard i Person koje se 
-nalaze u AdventureWorks2014 bazi podataka.
+CreditCard, PersonCreditCard i Person koje se nalaze u AdventureWorks2014 bazi podataka.
 */
 
 /*
